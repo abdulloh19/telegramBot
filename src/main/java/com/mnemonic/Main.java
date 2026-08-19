@@ -1,13 +1,14 @@
 package com.mnemonic;
 
 import com.mnemonic.bot.EnglishMnemonicBot;
+import com.mnemonic.service.ReminderSchedulerService;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 public class Main {
 
-    // Bot konfiguratsiyalari (Kerak bo'lsa o'zingizning tokeningizni kiriting)
+    // Bot konfiguratsiyalari
     private static final String DEFAULT_BOT_USERNAME = "MnemonicEngBot";
     private static final String DEFAULT_BOT_TOKEN = "8767592148:AAEYoPsMOWwMabavs_I34Lri9zyH6dSyeZU";
 
@@ -25,7 +26,12 @@ public class Main {
             EnglishMnemonicBot bot = new EnglishMnemonicBot(botUsername, botToken);
             botsApi.registerBot(bot);
 
-            System.out.println("✅ Bot muvaffaqiyatli ishga tushdi va xabarlarni qabul qilishga tayyor!");
+            // Avtomatik kunlik eslatma (Reminder Scheduler) servisini ulash
+            ReminderSchedulerService reminderService = new ReminderSchedulerService(bot.getUserRepository());
+            reminderService.setMessageSender(bot::sendDirectMessage);
+            reminderService.start();
+
+            System.out.println("✅ Bot va Kunlik Eslatma servisi muvaffaqiyatli ishga tushdi!");
             System.out.println("👉 Telegramda botingizga kiring va /start buyrug'ini yuboring.");
         } catch (TelegramApiException e) {
             System.err.println("❌ Botni ishga tushirishda xatolik yuz berdi!");
