@@ -86,11 +86,21 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         UserProfile profile = userRepository.getOrCreate(chatId, firstName);
 
+        // Agar foydalanuvchi hali darajasini tanlamagan bo'lsa, avval daraja so'raymiz
+        if (profile.getSelectedLevel() == null && !text.equals("/start")) {
+            sendInitialLevelPrompt(chatId, profile);
+            return;
+        }
+
         switch (text) {
             case "/start":
             case "/menu":
             case "🏠 Asosiy Menyu":
-                sendWelcomeMessage(chatId, profile);
+                if (profile.getSelectedLevel() == null) {
+                    sendInitialLevelPrompt(chatId, profile);
+                } else {
+                    sendWelcomeMessage(chatId, profile);
+                }
                 break;
 
             case "📅 Kunlik 20 ta so'z":
@@ -105,6 +115,10 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
                 sendStreakStats(chatId, profile);
                 break;
 
+            case "🎯 Darajani o'zgartirish":
+                sendInitialLevelPrompt(chatId, profile);
+                break;
+
             case "⏰ Eslatma sozlamalari":
                 sendReminderSettings(chatId, profile, false, 0);
                 break;
@@ -114,7 +128,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
                 break;
 
             case "📚 Darajalar":
-                sendLevelsMenu(chatId);
+                sendLevelsMenu(chatId, profile);
                 break;
 
             case "🎮 Tezkor Test":
@@ -145,7 +159,9 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         UserProfile profile = userRepository.getOrCreate(chatId, firstName);
         answerCallback(callbackId);
 
-        if (data.equals("lesson_start")) {
+        if (data.startsWith("set_level_")) {
+            handleSetUserLevel(chatId, profile, data, messageId);
+        } else if (data.equals("lesson_start")) {
             sendDailyLesson(chatId, profile, true, messageId);
         } else if (data.equals("lesson_next")) {
             dailyLessonService.nextWord(profile);
@@ -176,24 +192,102 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             sendRandomWord(chatId, profile);
         } else if (data.equals("quiz_next")) {
             sendNewQuiz(chatId);
-        } else if (data.startsWith("level_")) {
-            handleLevelSelection(chatId, profile, data);
+        } else if (data.startsWith("explore_level_")) {
+            handleExploreLevel(chatId, profile, data);
         } else if (data.startsWith("quiz_opt_")) {
             int selectedIndex = Integer.parseInt(data.replace("quiz_opt_", ""));
             handleQuizAnswer(chatId, messageId, selectedIndex);
         }
     }
 
+    // =========================================================================
+    // 🎯 DARAJANI SO'RASH VA TANLASH
+    // =========================================================================
+    private void sendInitialLevelPrompt(long chatId, UserProfile profile) {
+        String name = profile.getFirstName() != null ? profile.getFirstName() : "Do'stim";
+
+        String text = "👋 <b>Assalomu alaykum, " + escapeHtml(name) + "!</b>\n\n" +
+                "🧠 <b>Ingliz Tili Mnemonika Botiga xush kelibsiz!</b>\n\n" +
+                "Sizga eng mos so'zlar va mashqlarni taqdim etishimiz uchun, iltimos, <b>ingliz tili darajangizni tanlang:</b>";
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        List<InlineKeyboardButton> r1 = new ArrayList<>();
+        InlineKeyboardButton b1 = new InlineKeyboardButton("🟢 Boshlang'ich (A1-A2)");
+        b1.setCallbackData("set_level_beginner");
+        r1.add(b1);
+
+        List<InlineKeyboardButton> r2 = new ArrayList<>();
+        InlineKeyboardButton b2 = new InlineKeyboardButton("🟡 O'rta (B1-B2)");
+        b2.setCallbackData("set_level_intermediate");
+        r2.add(b2);
+
+        List<InlineKeyboardButton> r3 = new ArrayList<>();
+        InlineKeyboardButton b3 = new InlineKeyboardButton("🔴 Yuqori (C1-C2 / IELTS)");
+        b3.setCallbackData("set_level_advanced");
+        r3.add(b3);
+
+        rows.add(r1);
+        rows.add(r2);
+        rows.add(r3);
+        markup.setKeyboard(rows);
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(text);
+        message.setParseMode("HTML");
+        message.setReplyMarkup(markup);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleSetUserLevel(long chatId, UserProfile profile, String data, int messageId) {
+        WordLevel level;
+        if (data.equals("set_level_beginner")) {
+            level = WordLevel.BEGINNER;
+        } else if (data.equals("set_level_intermediate")) {
+            level = WordLevel.INTERMEDIATE;
+        } else {
+            level = WordLevel.ADVANCED;
+        }
+
+        profile.setSelectedLevel(level);
+        profile.setCurrentWordInDay(0);
+        userRepository.save(profile);
+
+        String successText = "🎉 <b>Ajoyib! Darajangiz belgilandi:</b> " + level.getDisplayName() + "\n\n" +
+                "Endi har kuni sizga aynan <b>" + level.getDisplayName() + "</b> darajasidagi 20 ta yangi mnemonik so'z va mustahkamlovchi mashqlar beriladi.\n\n" +
+                "👇 O'rganishni boshlash uchun pastdagi menyudan kerakli bo'limni tanlang:";
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(successText);
+        message.setParseMode("HTML");
+        message.setReplyMarkup(createMainMenuReplyKeyboard());
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void sendWelcomeMessage(long chatId, UserProfile profile) {
         String name = profile.getFirstName() != null ? profile.getFirstName() : "Do'stim";
         int streak = profile.getCurrentStreak();
+        String levelName = profile.getSelectedLevel() != null ? profile.getSelectedLevel().getDisplayName() : "Tanlanmagan";
 
         String welcomeText = "👋 <b>Assalomu alaykum, " + escapeHtml(name) + "!</b>\n\n" +
-                "🧠 <b>Ingliz Tili Mnemonika Botiga</b> xush kelibsiz!\n\n" +
-                "Har kuni <b>20 ta yangi so'zni</b> jonli obrazlar va esda qolarli hikoyalar bilan o'rganing va 🔥 <b>Streak</b> to'plab boring!\n\n" +
-                "🔥 <b>Joriy Streak:</b> " + streak + " kun\n" +
+                "🧠 <b>Ingliz Tili Mnemonika Boti</b>\n\n" +
+                "🎯 <b>Tanlangan daraja:</b> " + levelName + "\n" +
+                "🔥 <b>Joriy Streak:</b> " + streak + " kun ketma-ket\n" +
                 "📚 <b>Bugungi Dars:</b> " + profile.getCurrentDayIndex() + "-kunlik to'plam (20 ta so'z)\n\n" +
-                "👇 Kerakli bo'limni tanlang:";
+                "👇 O'rganish uchun kerakli bo'limni tanlang:";
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
@@ -308,7 +402,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     }
 
     // =========================================================================
-    // 📝 KUNLIK MASHQLAR (EXERCISES)
+    // 📝 KUNLIK MASHQLAR (EXERCISES) VA XATO BO'LGANDA TUSHUNTIRISH
     // =========================================================================
     private void startDailyExercises(long chatId, UserProfile profile, boolean isEdit, int messageId) {
         List<Exercise> exercises = exerciseService.generateDailyExerciseSet(profile);
@@ -380,14 +474,20 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         StringBuilder sb = new StringBuilder();
         if (isCorrect) {
-            sb.append("🎉 <b>To'g'ri javob!</b> ✅\n\n");
+            sb.append("🎉 <b>Ajoyib! To'g'ri javob!</b> ✅\n\n");
+            sb.append("💡 <b>Eslab qolish uchun mnemonika:</b>\n");
+            sb.append(currentEx.getRelatedWord().toFormattedCard());
         } else {
-            sb.append("❌ <b>Noto'g'ri!</b>\n");
-            sb.append("To'g'ri javob: <b>").append(escapeHtml(currentEx.getOptions().get(currentEx.getCorrectOptionIndex()))).append("</b>\n\n");
-        }
+            // Xato javob berilganda to'liq tushuntirib berish
+            String userChoice = currentEx.getOptions().get(selectedIdx);
+            String correctChoice = currentEx.getOptions().get(currentEx.getCorrectOptionIndex());
 
-        sb.append("💡 <b>Eslab qolish uchun mnemonika:</b>\n");
-        sb.append(currentEx.getRelatedWord().toFormattedCard());
+            sb.append("❌ <b>Noto'g'ri javob!</b>\n\n");
+            sb.append("Siz tanladingiz: <s>").append(escapeHtml(userChoice)).append("</s>\n");
+            sb.append("✅ <b>To'g'ri javob:</b> <b>").append(escapeHtml(correctChoice)).append("</b>\n\n");
+            sb.append("🧠 <b>NEGA BUNDAY? (Mnemonik tushuntirish):</b>\n");
+            sb.append(currentEx.getRelatedWord().toFormattedCard());
+        }
 
         session.nextQuestion();
 
@@ -400,7 +500,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             nextBtn.setCallbackData("exercise_next_question");
             row1.add(nextBtn);
         } else {
-            InlineKeyboardButton finishBtn = new InlineKeyboardButton("🏁 Mashqlarni yakunlash");
+            InlineKeyboardButton finishBtn = new InlineKeyboardButton("🏁 Natijani ko'rish");
             finishBtn.setCallbackData("exercise_next_question");
             row1.add(finishBtn);
         }
@@ -420,7 +520,6 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
 
-        // Agar barcha savollar tugagan bo'lsa natijani saqlaymiz
         if (session.isCompleted()) {
             StreakService.StreakResult streakRes = exerciseService.completeExerciseSession(profile, session.getCorrectCount());
             activeExerciseSessions.remove(chatId);
@@ -534,7 +633,14 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     // 🎲 TASODIFIY SO'Z & QIDIRUV
     // =========================================================================
     private void sendRandomWord(long chatId, UserProfile profile) {
-        Optional<Word> wordOpt = wordRepository.getRandomWord();
+        Optional<Word> wordOpt = (profile.getSelectedLevel() != null)
+                ? wordRepository.getRandomWordByLevel(profile.getSelectedLevel())
+                : wordRepository.getRandomWord();
+
+        if (wordOpt.isEmpty()) {
+            wordOpt = wordRepository.getRandomWord();
+        }
+
         if (wordOpt.isEmpty()) {
             sendMessage(chatId, "Hozircha so'zlar mavjud emas.");
             return;
@@ -584,11 +690,12 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendLevelsMenu(long chatId) {
-        String text = "📚 <b>O'zingizga mos darajani tanlang:</b>\n\n" +
-                "🟢 <b>Boshlang'ich (A1-A2):</b> Kundalik va oddiy so'zlar\n" +
-                "🟡 <b>O'rta (B1-B2):</b> Erkin muloqot va muhim so'zlar\n" +
-                "🔴 <b>Yuqori (C1-C2 / IELTS):</b> Akademik va nufuzli so'zlar";
+    private void sendLevelsMenu(long chatId, UserProfile profile) {
+        String currentLevelStr = profile.getSelectedLevel() != null ? profile.getSelectedLevel().getDisplayName() : "Tanlanmagan";
+
+        String text = "📚 <b>DARAXALAR BO'LIMI:</b>\n\n" +
+                "📌 <b>Hozirgi darajangiz:</b> " + currentLevelStr + "\n\n" +
+                "Istalgan darajadagi so'zlarni ko'rish uchun quyidagi tugmalardan birini tanlang:";
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
@@ -600,17 +707,17 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         List<InlineKeyboardButton> row1 = new ArrayList<>();
         InlineKeyboardButton b1 = new InlineKeyboardButton("🟢 Boshlang'ich (A1-A2)");
-        b1.setCallbackData("level_beginner");
+        b1.setCallbackData("explore_level_beginner");
         row1.add(b1);
 
         List<InlineKeyboardButton> row2 = new ArrayList<>();
         InlineKeyboardButton b2 = new InlineKeyboardButton("🟡 O'rta (B1-B2)");
-        b2.setCallbackData("level_intermediate");
+        b2.setCallbackData("explore_level_intermediate");
         row2.add(b2);
 
         List<InlineKeyboardButton> row3 = new ArrayList<>();
         InlineKeyboardButton b3 = new InlineKeyboardButton("🔴 Yuqori (C1-C2 / IELTS)");
-        b3.setCallbackData("level_advanced");
+        b3.setCallbackData("explore_level_advanced");
         row3.add(b3);
 
         rows.add(row1);
@@ -627,10 +734,10 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         }
     }
 
-    private void handleLevelSelection(long chatId, UserProfile profile, String data) {
+    private void handleExploreLevel(long chatId, UserProfile profile, String data) {
         WordLevel level;
-        if (data.equals("level_beginner")) level = WordLevel.BEGINNER;
-        else if (data.equals("level_intermediate")) level = WordLevel.INTERMEDIATE;
+        if (data.equals("explore_level_beginner")) level = WordLevel.BEGINNER;
+        else if (data.equals("explore_level_intermediate")) level = WordLevel.INTERMEDIATE;
         else level = WordLevel.ADVANCED;
 
         Optional<Word> wordOpt = wordRepository.getRandomWordByLevel(level);
@@ -710,13 +817,18 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         StringBuilder response = new StringBuilder();
         if (isCorrect) {
             response.append("🎉 <b>Ajoyib! To'g'ri javob!</b> ✅\n\n");
+            response.append("💡 <b>Eslab qolish uchun mnemonika:</b>\n");
+            response.append(question.getRelatedWord().toFormattedCard());
         } else {
-            response.append("❌ <b>Afsus, noto'g'ri!</b>\n");
-            response.append("To'g'ri javob: <b>").append(escapeHtml(question.getOptions().get(question.getCorrectOptionIndex()))).append("</b>\n\n");
-        }
+            String userChoice = question.getOptions().get(selectedIndex);
+            String correctChoice = question.getOptions().get(question.getCorrectOptionIndex());
 
-        response.append("💡 <b>Eslab qolish uchun mnemonika:</b>\n");
-        response.append(question.getRelatedWord().toFormattedCard());
+            response.append("❌ <b>Noto'g'ri javob!</b>\n\n");
+            response.append("Siz tanladingiz: <s>").append(escapeHtml(userChoice)).append("</s>\n");
+            response.append("✅ <b>To'g'ri javob:</b> <b>").append(escapeHtml(correctChoice)).append("</b>\n\n");
+            response.append("🧠 <b>NEGA BUNDAY? (Mnemonik tushuntirish):</b>\n");
+            response.append(question.getRelatedWord().toFormattedCard());
+        }
 
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(String.valueOf(chatId));
@@ -773,20 +885,25 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add(new KeyboardButton("🔥 Streak & Natijalarim"));
-        row2.add(new KeyboardButton("⏰ Eslatma sozlamalari"));
+        row2.add(new KeyboardButton("🎯 Darajani o'zgartirish"));
 
         KeyboardRow row3 = new KeyboardRow();
+        row3.add(new KeyboardButton("⏰ Eslatma sozlamalari"));
         row3.add(new KeyboardButton("🎲 Tasodifiy so'z"));
-        row3.add(new KeyboardButton("📚 Darajalar"));
 
         KeyboardRow row4 = new KeyboardRow();
+        row4.add(new KeyboardButton("📚 Darajalar"));
         row4.add(new KeyboardButton("🎮 Tezkor Test"));
-        row4.add(new KeyboardButton("🔍 Qidiruv"));
+
+        KeyboardRow row5 = new KeyboardRow();
+        row5.add(new KeyboardButton("💡 Mnemonika nima?"));
+        row5.add(new KeyboardButton("🔍 Qidiruv"));
 
         keyboard.add(row1);
         keyboard.add(row2);
         keyboard.add(row3);
         keyboard.add(row4);
+        keyboard.add(row5);
 
         keyboardMarkup.setKeyboard(keyboard);
         return keyboardMarkup;

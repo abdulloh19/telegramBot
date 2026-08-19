@@ -7,14 +7,16 @@ import java.time.LocalDate;
 public class UserProfile {
     private long chatId;
     private String firstName;
+    private WordLevel selectedLevel; // null bo'lsa kirganda so'raladi
+
     private int currentStreak = 0;
     private int maxStreak = 0;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate lastActiveDate;
 
-    private int currentDayIndex = 1; // 1-kun, 2-kun, 3-kun...
-    private int currentWordInDay = 0; // 0 dan 19 gacha (20 ta so'z)
+    private int currentDayIndex = 1;
+    private int currentWordInDay = 0;
     private boolean todayLessonCompleted = false;
     private boolean todayExerciseCompleted = false;
 
@@ -32,6 +34,7 @@ public class UserProfile {
     public UserProfile(long chatId, String firstName) {
         this.chatId = chatId;
         this.firstName = firstName;
+        this.selectedLevel = null; // Ilk kirganida darajasini tanlaydi
         this.currentStreak = 0;
         this.maxStreak = 0;
         this.currentDayIndex = 1;
@@ -54,6 +57,14 @@ public class UserProfile {
 
     public void setFirstName(String firstName) {
         this.firstName = firstName;
+    }
+
+    public WordLevel getSelectedLevel() {
+        return selectedLevel;
+    }
+
+    public void setSelectedLevel(WordLevel selectedLevel) {
+        this.selectedLevel = selectedLevel;
     }
 
     public int getCurrentStreak() {

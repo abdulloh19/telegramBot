@@ -23,10 +23,10 @@ public class ExerciseService {
     }
 
     /**
-     * Foydalanuvchining bugungi 20 ta so'zi asosida 5 ta mustahkamlovchi mashq generatsiya qiladi
+     * Foydalanuvchining tanlagan darajasiga mos bugungi 20 ta so'zi asosida 5 ta mustahkamlovchi mashq generatsiya qiladi
      */
     public List<Exercise> generateDailyExerciseSet(UserProfile profile) {
-        List<Word> dayWords = new ArrayList<>(wordRepository.getWordsForDay(profile.getCurrentDayIndex()));
+        List<Word> dayWords = new ArrayList<>(wordRepository.getWordsForDayAndLevel(profile.getCurrentDayIndex(), profile.getSelectedLevel()));
         if (dayWords.isEmpty()) {
             dayWords = new ArrayList<>(wordRepository.getAllWords());
         }
@@ -48,7 +48,6 @@ public class ExerciseService {
             List<String> options = new ArrayList<>();
 
             if (type == 0) {
-                // Inglizcha so'z beriladi -> O'zbekcha tarjimasini topish
                 prompt = "📝 <b>Mashq " + (i + 1) + "/" + count + ":</b> Ushbu so'zning to'g'ri ma'nosini tanlang:\n\n" +
                          "🔤 <b>" + targetWord.getEnglishWord().toUpperCase() + "</b> " + targetWord.getPronunciation();
                 correctAnswer = targetWord.getUzbekMeaning();
@@ -57,7 +56,6 @@ public class ExerciseService {
                     options.add(distractors.get(d).getUzbekMeaning());
                 }
             } else if (type == 1) {
-                // Mnemonik obraz beriladi -> So'zni topish
                 prompt = "🧠 <b>Mashq " + (i + 1) + "/" + count + ":</b> Ushbu mnemonik obraz qaysi so'zga tegishli?\n\n" +
                          "🎬 <i>\"" + targetWord.getMnemonicStory() + "\"</i>";
                 correctAnswer = targetWord.getEnglishWord();
@@ -66,7 +64,6 @@ public class ExerciseService {
                     options.add(distractors.get(d).getEnglishWord());
                 }
             } else {
-                // O'zbekcha ma'nosi beriladi -> Inglizcha so'zni topish
                 prompt = "🇺🇿 <b>Mashq " + (i + 1) + "/" + count + ":</b> Quyidagi ma'noga mos inglizcha so'zni toping:\n\n" +
                          "🎯 <b>\"" + targetWord.getUzbekMeaning() + "\"</b>";
                 correctAnswer = targetWord.getEnglishWord();
