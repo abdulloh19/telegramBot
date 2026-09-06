@@ -96,7 +96,7 @@ public class AudioPronunciationService {
     }
 
     /**
-     * Ixtiyoriy so'z uchun Telegram SendVoice obyektini tayyorlaydi
+     * Ixtiyoriy so'z yoki matn uchun Telegram SendVoice obyektini tayyorlaydi
      */
     public SendVoice createVoiceMessage(long chatId, String wordText, String caption) {
         File audioFile = getOrDownloadAudio(wordText);
@@ -108,6 +108,25 @@ public class AudioPronunciationService {
         sendVoice.setChatId(String.valueOf(chatId));
         sendVoice.setVoice(new InputFile(audioFile));
         sendVoice.setCaption(caption);
+        sendVoice.setParseMode("HTML");
+        return sendVoice;
+    }
+
+    /**
+     * Butun dialog uchun to'liq ovozli xabar (SendVoice) tayyorlaydi
+     */
+    public SendVoice createDialogueVoiceMessage(long chatId, com.mnemonic.model.DailyDialogue dialogue) {
+        File audioFile = getOrDownloadAudio(dialogue.getSpeechScript());
+        if (audioFile == null || !audioFile.exists()) {
+            return null;
+        }
+
+        SendVoice sendVoice = new SendVoice();
+        sendVoice.setChatId(String.valueOf(chatId));
+        sendVoice.setVoice(new InputFile(audioFile));
+        sendVoice.setCaption("🎧 <b>Audio Dialog:</b> " + dialogue.getTitle() + "\n" +
+                             "📊 <b>Daraja:</b> " + dialogue.getLevel().getDisplayName() + "\n" +
+                             "💡 <i>Bugungi 20 ta so'z real suhbatda qo'llangan. Eshitib, birga takrorlang!</i>");
         sendVoice.setParseMode("HTML");
         return sendVoice;
     }

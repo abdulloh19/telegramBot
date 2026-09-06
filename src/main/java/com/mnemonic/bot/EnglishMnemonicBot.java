@@ -42,6 +42,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     private final QuizService quizService;
     private final AudioPronunciationService audioService;
     private final CreativeContentService creativeContentService;
+    private final com.mnemonic.service.DialogueService dialogueService;
 
     // Chat ID -> Hozirgi viktorina savoli
     private final Map<Long, QuizQuestion> currentQuizzes = new ConcurrentHashMap<>();
@@ -61,6 +62,11 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         this.quizService = new QuizService(wordRepository);
         this.audioService = new AudioPronunciationService();
         this.creativeContentService = new CreativeContentService();
+        this.dialogueService = new com.mnemonic.service.DialogueService();
+    }
+
+    public com.mnemonic.service.DialogueService getDialogueService() {
+        return dialogueService;
     }
 
     public UserRepository getUserRepository() {
@@ -124,6 +130,12 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
             case "📅 Kunlik 20 ta so'z":
                 sendDailyLesson(chatId, profile, false, 0);
+                break;
+
+            case "🗣️ Kunlik Dialog":
+            case "🗣️ Kunlik Dialog (Speaking)":
+            case "/dialog":
+                sendDailyDialogue(chatId, profile);
                 break;
 
             case "📝 Kunlik Mashqlar":
@@ -190,6 +202,11 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             sendDailyLesson(chatId, profile, true, messageId);
         } else if (data.equals("lesson_finish")) {
             handleFinishDailyLesson(chatId, profile, messageId);
+        } else if (data.equals("dialog_show")) {
+            sendDailyDialogue(chatId, profile);
+        } else if (data.startsWith("dialog_audio_")) {
+            String dialogId = data.replace("dialog_audio_", "");
+            sendDialogueAudio(chatId, dialogId, profile);
         } else if (data.equals("exercise_start")) {
             startDailyExercises(chatId, profile, true, messageId);
         } else if (data.startsWith("exercise_ans_")) {
@@ -419,12 +436,18 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         sb.append("🔥 <b>Streak:</b> ").append(streakResult.getCurrentStreak()).append(" kun ketma-ket!\n");
         sb.append("🏆 <b>Rekord:</b> ").append(streakResult.getMaxStreak()).append(" kun\n");
         sb.append("📚 <b>Jami o'rganilgan so'zlar:</b> ").append(profile.getTotalWordsLearned()).append(" ta\n\n");
-        sb.append("💡 <i>Endi so'zlarni mustahkamlash uchun 5 ta qiziqarli mashqni bajaring!</i>");
+        sb.append("💡 <i>Endi so'zlarni hayotiy suhbatda ko'rish uchun Dialog o'qing yoki mashqlarni bajaring!</i>");
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
 
+        List<InlineKeyboardButton> row0 = new ArrayList<>();
+        InlineKeyboardButton dialogBtn = new InlineKeyboardButton("🗣️ 20 ta so'zdan tuzilgan Dialog & Audio");
+        dialogBtn.setCallbackData("dialog_show");
+        row0.add(dialogBtn);
+        rows.add(row0);
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
         InlineKeyboardButton exBtn = new InlineKeyboardButton("📝 Mashqlarni boshlash (5 ta test)");
         exBtn.setCallbackData("exercise_start");
         row1.add(exBtn);
@@ -487,8 +510,14 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
             InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
             List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-            List<InlineKeyboardButton> row1 = new ArrayList<>();
 
+            List<InlineKeyboardButton> row0 = new ArrayList<>();
+            InlineKeyboardButton dialogBtn = new InlineKeyboardButton("🗣️ 20 ta so'zdan tuzilgan Dialog & Audio");
+            dialogBtn.setCallbackData("dialog_show");
+            row0.add(dialogBtn);
+            rows.add(row0);
+
+            List<InlineKeyboardButton> row1 = new ArrayList<>();
             InlineKeyboardButton retryBtn = new InlineKeyboardButton("🔄 Qayta mashq qilish");
             retryBtn.setCallbackData("exercise_start");
             row1.add(retryBtn);
@@ -496,8 +525,8 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             InlineKeyboardButton lessonBtn = new InlineKeyboardButton("📅 Bugungi 20 ta so'z");
             lessonBtn.setCallbackData("lesson_start");
             row1.add(lessonBtn);
-
             rows.add(row1);
+
             markup.setKeyboard(rows);
 
             SendMessage resMsg = new SendMessage();
@@ -1029,6 +1058,100 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         currentQuizzes.remove(chatId);
     }
 
+    // =========================================================================
+    // 🗣️ KUNLIK DIALOG & SPEAKING PRACTICE (AUDIO BILAN)
+    // =========================================================================
+    private void sendDailyDialogue(long chatId, UserProfile profile) {
+        com.mnemonic.model.DailyDialogue dialogue = dialogueService.getDialogueForProfile(profile);
+        if (dialogue == null) {
+            sendMessage(chatId, "Hozircha dialog mavjud emas.");
+            return;
+        }
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(dialogue.toFormattedCard());
+        message.setParseMode("HTML");
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        InlineKeyboardButton audioBtn = new InlineKeyboardButton("🎧 Butun dialogni tinglash (Audio)");
+        audioBtn.setCallbackData("dialog_audio_" + dialogue.getId());
+        row1.add(audioBtn);
+        rows.add(row1);
+
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        InlineKeyboardButton exBtn = new InlineKeyboardButton("📝 Mashqlarni yechish");
+        exBtn.setCallbackData("exercise_start");
+        row2.add(exBtn);
+
+        InlineKeyboardButton lessonBtn = new InlineKeyboardButton("📅 20 ta so'z");
+        lessonBtn.setCallbackData("lesson_start");
+        row2.add(lessonBtn);
+        rows.add(row2);
+
+        markup.setKeyboard(rows);
+        message.setReplyMarkup(markup);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendDialogueAudio(long chatId, String dialogId, UserProfile profile) {
+        com.mnemonic.model.DailyDialogue dialogue = dialogueService.getDialogueById(dialogId);
+        if (dialogue == null) {
+            dialogue = dialogueService.getDialogueForProfile(profile);
+        }
+        if (dialogue == null) {
+            sendMessage(chatId, "Dialog audio topilmadi.");
+            return;
+        }
+
+        SendVoice voice = audioService.createDialogueVoiceMessage(chatId, dialogue);
+        if (voice != null) {
+            try {
+                execute(voice);
+
+                // Audio ostidan darhol mashqlar va boshqa harakatlar tugmasini chiqarish
+                SendMessage nextMsg = new SendMessage();
+                nextMsg.setChatId(String.valueOf(chatId));
+                nextMsg.setText("👏 <b>Dialogni muvaffaqiyatli tingladingiz!</b> 🎧\n\n" +
+                                "💡 <i>Tavsiya: Dialogdagi jumlalarni ovoz chiqarib 1-2 marta o'zingiz ham qaytarib ko'ring.</i>\n\n" +
+                                "👇 Endi ushbu so'zlarni mustahkamlash uchun 5 ta test mashqini yeching:");
+                nextMsg.setParseMode("HTML");
+
+                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+                List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+                List<InlineKeyboardButton> row1 = new ArrayList<>();
+                InlineKeyboardButton exBtn = new InlineKeyboardButton("📝 5 ta Mashqni boshlash");
+                exBtn.setCallbackData("exercise_start");
+                row1.add(exBtn);
+                rows.add(row1);
+
+                List<InlineKeyboardButton> row2 = new ArrayList<>();
+                InlineKeyboardButton lessonBtn = new InlineKeyboardButton("📅 Bugungi 20 ta so'z");
+                lessonBtn.setCallbackData("lesson_start");
+                row2.add(lessonBtn);
+                rows.add(row2);
+
+                markup.setKeyboard(rows);
+                nextMsg.setReplyMarkup(markup);
+
+                execute(nextMsg);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+        } else {
+            sendMessage(chatId, "⚠️ Dialog audiosini yuklashda vaqtinchalik muammo yuz berdi.");
+        }
+    }
+
     private void sendMnemonicGuide(long chatId) {
         String guide = "🧠 <b>Mnemonika Nima va U Qanday Ishlaydi?</b>\n\n" +
                 "Mnemonika — inson miyasining assotsiativ xotirasidan foydalanib, yangi ma'lumotlarni oson va uzoq muddatga eslab qolish san'atidir.\n\n" +
@@ -1057,26 +1180,30 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         row1.add(new KeyboardButton("📝 Kunlik Mashqlar"));
 
         KeyboardRow row2 = new KeyboardRow();
+        row2.add(new KeyboardButton("🗣️ Kunlik Dialog"));
         row2.add(new KeyboardButton("🔥 Streak & Natijalarim"));
-        row2.add(new KeyboardButton("🎯 Darajani o'zgartirish"));
 
         KeyboardRow row3 = new KeyboardRow();
         row3.add(new KeyboardButton("⏰ Eslatma sozlamalari"));
-        row3.add(new KeyboardButton("🎲 Tasodifiy so'z"));
+        row3.add(new KeyboardButton("🎯 Darajani o'zgartirish"));
 
         KeyboardRow row4 = new KeyboardRow();
+        row4.add(new KeyboardButton("🎲 Tasodifiy so'z"));
         row4.add(new KeyboardButton("📚 Darajalar"));
-        row4.add(new KeyboardButton("🎮 Tezkor Test"));
 
         KeyboardRow row5 = new KeyboardRow();
-        row5.add(new KeyboardButton("💡 Mnemonika nima?"));
+        row5.add(new KeyboardButton("🎮 Tezkor Test"));
         row5.add(new KeyboardButton("🔍 Qidiruv"));
+
+        KeyboardRow row6 = new KeyboardRow();
+        row6.add(new KeyboardButton("💡 Mnemonika nima?"));
 
         keyboard.add(row1);
         keyboard.add(row2);
         keyboard.add(row3);
         keyboard.add(row4);
         keyboard.add(row5);
+        keyboard.add(row6);
 
         keyboardMarkup.setKeyboard(keyboard);
         return keyboardMarkup;
