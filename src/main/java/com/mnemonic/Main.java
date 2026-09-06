@@ -27,7 +27,11 @@ public class Main {
             botsApi.registerBot(bot);
 
             // Avtomatik kunlik eslatma (Reminder Scheduler) servisini ulash
-            ReminderSchedulerService reminderService = new ReminderSchedulerService(bot.getUserRepository());
+            ReminderSchedulerService reminderService = new ReminderSchedulerService(
+                    bot.getUserRepository(),
+                    bot.getWordRepository(),
+                    bot.getCreativeContentService()
+            );
             reminderService.setMessageSender(bot::sendDirectMessage);
             reminderService.start();
 

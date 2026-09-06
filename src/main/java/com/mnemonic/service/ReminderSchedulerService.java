@@ -1,7 +1,9 @@
 package com.mnemonic.service;
 
 import com.mnemonic.model.UserProfile;
+import com.mnemonic.model.Word;
 import com.mnemonic.repository.UserRepository;
+import com.mnemonic.repository.WordRepository;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -16,14 +18,18 @@ import java.util.function.Consumer;
 
 public class ReminderSchedulerService {
     private final UserRepository userRepository;
+    private final WordRepository wordRepository;
+    private final CreativeContentService creativeContentService;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private Consumer<SendMessage> messageSender;
 
     // Chat ID -> Oxirgi eslatma yuborilgan sana (kuniga faqat 1 marta eslatma jo'natish uchun)
     private final Map<Long, LocalDate> lastReminderSentDate = new HashMap<>();
 
-    public ReminderSchedulerService(UserRepository userRepository) {
+    public ReminderSchedulerService(UserRepository userRepository, WordRepository wordRepository, CreativeContentService creativeContentService) {
         this.userRepository = userRepository;
+        this.wordRepository = wordRepository;
+        this.creativeContentService = creativeContentService;
     }
 
     public void setMessageSender(Consumer<SendMessage> messageSender) {
@@ -31,7 +37,7 @@ public class ReminderSchedulerService {
     }
 
     public void start() {
-        System.out.println("⏰ Kunlik Eslatma (Reminder Scheduler) servisi ishga tushdi.");
+        System.out.println("⏰ Kreativ Kunlik Eslatma (Reminder Scheduler) servisi ishga tushdi.");
 
         // Har 15 daqiqada tekshirib boradi
         scheduler.scheduleAtFixedRate(this::checkAndSendReminders, 1, 15, TimeUnit.MINUTES);
@@ -60,7 +66,7 @@ public class ReminderSchedulerService {
                 }
 
                 // Foydalanuvchi bugun allaqachon darsni bajargan bo'lsa, eslatish shart emas
-                if (today.equals(profile.getLastActiveDate())) {
+                if (today.equals(profile.getLastActiveDate()) && profile.isTodayLessonCompleted()) {
                     continue;
                 }
 
@@ -71,49 +77,52 @@ public class ReminderSchedulerService {
     }
 
     private void sendReminderMessage(UserProfile profile) {
-        String name = profile.getFirstName() != null ? profile.getFirstName() : "Do'stim";
-        int streak = profile.getCurrentStreak();
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("⏰ <b>KUNLIK ESLATMA!</b> 🧠\n\n");
-        sb.append("Salom, <b>").append(name).append("</b>!\n\n");
-        sb.append("📅 Bugungi <b>20 ta yangi mnemonik so'z</b> darsingiz sizni kutmoqda!\n");
-
-        if (streak > 0) {
-            sb.append("🔥 <b>Joriy Streak:</b> ").append(streak).append(" kun ketma-ket!\n");
-            sb.append("⚠️ <i>Ushbu ajoyib natijangizni yo'qotib qo'ymaslik uchun bugun darsni o'z vaqtida bajaring!</i>\n\n");
+        // Bugungi darsdagi yoki tanlangan darajadagi e'tiborga molik "Kun So'zi"
+        List<Word> dayWords = wordRepository.getWordsForDayAndLevel(profile.getCurrentDayIndex(), profile.getSelectedLevel());
+        Word featuredWord = null;
+        if (!dayWords.isEmpty()) {
+            int featuredIdx = profile.getCurrentDayIndex() % dayWords.size();
+            featuredWord = dayWords.get(featuredIdx);
         } else {
-            sb.append("🚀 <i>Har kuni 20 tadan so'z o'rganib, lug'at boyligingizni 1 oyda 600 taga oshiring!</i>\n\n");
+            featuredWord = wordRepository.getRandomWord().orElse(null);
         }
 
-        sb.append("👇 Darsni boshlash uchun quyidagi tugmani bosing:");
+        String creativeText = creativeContentService.buildCreativeReminder(profile, featuredWord);
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(profile.getChatId()));
-        message.setText(sb.toString());
+        message.setText(creativeText);
         message.setParseMode("HTML");
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
+        if (featuredWord != null) {
+            List<InlineKeyboardButton> audioRow = new ArrayList<>();
+            InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 Kun so'zi talaffuzini eshitish");
+            audioBtn.setCallbackData("audio_word_" + featuredWord.getEnglishWord().toLowerCase());
+            audioRow.add(audioBtn);
+            rows.add(audioRow);
+        }
+
         List<InlineKeyboardButton> row1 = new ArrayList<>();
         InlineKeyboardButton startLessonBtn = new InlineKeyboardButton("📅 Bugungi 20 ta so'zni boshlash");
         startLessonBtn.setCallbackData("lesson_start");
         row1.add(startLessonBtn);
+        rows.add(row1);
 
         List<InlineKeyboardButton> row2 = new ArrayList<>();
         InlineKeyboardButton exerciseBtn = new InlineKeyboardButton("📝 Mashqlarni yechish");
         exerciseBtn.setCallbackData("exercise_start");
         row2.add(exerciseBtn);
-
-        rows.add(row1);
         rows.add(row2);
+
         markup.setKeyboard(rows);
         message.setReplyMarkup(markup);
 
         try {
             messageSender.accept(message);
-            System.out.println("📬 Eslatma yuborildi: @" + profile.getFirstName() + " (ChatId: " + profile.getChatId() + ")");
+            System.out.println("📬 Kreativ eslatma yuborildi: @" + profile.getFirstName() + " (ChatId: " + profile.getChatId() + ")");
         } catch (Exception e) {
             System.err.println("❌ Eslatma yuborishda xatolik (" + profile.getChatId() + "): " + e.getMessage());
         }

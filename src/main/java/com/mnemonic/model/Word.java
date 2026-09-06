@@ -56,17 +56,24 @@ public class Word {
     }
 
     /**
-     * Telegramda chiroyli HTML formatida kartochkani qaytaradi
+     * Telegramda 4-bosqichli kreativ mnemonika formatida kartochkani qaytaradi
      */
     public String toFormattedCard() {
-        return "📖 <b>So'z:</b> <code>" + englishWord + "</code> " + pronunciation + "\n" +
-               "🇺🇿 <b>Ma'nosi:</b> <b>" + uzbekMeaning + "</b>\n" +
-               "📊 <b>Daraja:</b> " + level.getDisplayName() + "\n\n" +
-               "🧠 <b>MNEMONIKA (Eslab qolish siri):</b>\n" +
-               "🔗 <b>Kalit so'z:</b> <i>" + mnemonicHook + "</i>\n" +
-               "🎬 <b>Obraz / Hikoya:</b>\n" + mnemonicStory + "\n\n" +
-               "📝 <b>Misol:</b>\n" +
-               "🇬🇧 <i>" + exampleEn + "</i>\n" +
-               "🇺🇿 <i>" + exampleUz + "</i>";
+        return "━━━━━━━━━━━━━━━━━━━━━\n" +
+               "🔤 <b>SO'Z:</b> <code>" + englishWord.toUpperCase() + "</code> " + pronunciation + "\n" +
+               "🇺🇿 <b>MA'NOSI:</b> <b>" + uzbekMeaning + "</b>\n" +
+               "📊 <b>Daraja:</b> " + level.getDisplayName() + "\n" +
+               "━━━━━━━━━━━━━━━━━━━━━\n\n" +
+               "🧠 <b>KREATIV MNEMONIK METODIKA (4 Qadam):</b>\n\n" +
+               "1️⃣ 🔗 <b>Fonetik Ilmoq (Eshitish):</b>\n" +
+               "   👉 <i>«" + mnemonicHook + "»</i>\n\n" +
+               "2️⃣ 🎬 <b>Kinematik Obraz (Tasavvur qiling):</b>\n" +
+               "   👉 " + mnemonicStory + "\n\n" +
+               "3️⃣ 📝 <b>Kontekst & Misol Gap:</b>\n" +
+               "   🇬🇧 <i>\"" + exampleEn + "\"</i>\n" +
+               "   🇺🇿 <i>\"" + exampleUz + "\"</i>\n\n" +
+               "4️⃣ ⚡ <b>Xotirani Faollashtirish (3 soniya):</b>\n" +
+               "   👉 <i>Ko'zingizni 3 soniya yuming, yuqoridagi voqeani tasavvur qiling va '🔊 Audio' tugmasi orqali talaffuzni qaytaring!</i>\n" +
+               "━━━━━━━━━━━━━━━━━━━━━";
     }
 }

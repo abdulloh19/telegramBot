@@ -7,6 +7,8 @@ import com.mnemonic.model.Word;
 import com.mnemonic.model.WordLevel;
 import com.mnemonic.repository.UserRepository;
 import com.mnemonic.repository.WordRepository;
+import com.mnemonic.service.AudioPronunciationService;
+import com.mnemonic.service.CreativeContentService;
 import com.mnemonic.service.DailyLessonService;
 import com.mnemonic.service.ExerciseService;
 import com.mnemonic.service.QuizService;
@@ -14,6 +16,7 @@ import com.mnemonic.service.StreakService;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendVoice;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -37,6 +40,8 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     private final DailyLessonService dailyLessonService;
     private final ExerciseService exerciseService;
     private final QuizService quizService;
+    private final AudioPronunciationService audioService;
+    private final CreativeContentService creativeContentService;
 
     // Chat ID -> Hozirgi viktorina savoli
     private final Map<Long, QuizQuestion> currentQuizzes = new ConcurrentHashMap<>();
@@ -54,10 +59,24 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         this.dailyLessonService = new DailyLessonService(wordRepository, userRepository, streakService);
         this.exerciseService = new ExerciseService(wordRepository, userRepository, streakService);
         this.quizService = new QuizService(wordRepository);
+        this.audioService = new AudioPronunciationService();
+        this.creativeContentService = new CreativeContentService();
     }
 
     public UserRepository getUserRepository() {
         return userRepository;
+    }
+
+    public WordRepository getWordRepository() {
+        return wordRepository;
+    }
+
+    public CreativeContentService getCreativeContentService() {
+        return creativeContentService;
+    }
+
+    public AudioPronunciationService getAudioService() {
+        return audioService;
     }
 
     @Override
@@ -140,7 +159,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
                 break;
 
             case "🔍 Qidiruv":
-                sendMessage(chatId, "🔍 <b>So'z qidirish:</b>\n\nIstalgan inglizcha yoki o'zbekcha so'zni yozib yuboring (Masalan: <code>abandon</code>, <code>frugal</code>, <code>qaysar</code>). Bot uning mnemonikasini topib beradi.");
+                sendMessage(chatId, "🔍 <b>So'z qidirish:</b>\n\nIstalgan inglizcha yoki o'zbekcha so'zni yozib yuboring (Masalan: <code>abandon</code>, <code>frugal</code>, <code>qaysar</code>). Bot uning mnemonikasini topib beradi va audio talaffuzini eshitish imkonini taqdim etadi.");
                 break;
 
             default:
@@ -197,6 +216,9 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         } else if (data.startsWith("quiz_opt_")) {
             int selectedIndex = Integer.parseInt(data.replace("quiz_opt_", ""));
             handleQuizAnswer(chatId, messageId, selectedIndex);
+        } else if (data.startsWith("audio_word_")) {
+            String wordText = data.replace("audio_word_", "");
+            sendWordAudio(chatId, wordText);
         }
     }
 
@@ -208,7 +230,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         String text = "👋 <b>Assalomu alaykum, " + escapeHtml(name) + "!</b>\n\n" +
                 "🧠 <b>Ingliz Tili Mnemonika Botiga xush kelibsiz!</b>\n\n" +
-                "Sizga eng mos so'zlar va mashqlarni taqdim etishimiz uchun, iltimos, <b>ingliz tili darajangizni tanlang:</b>";
+                "Sizga eng mos so'zlar, ovozli talaffuzlar va mashqlarni taqdim etishimiz uchun, iltimos, <b>ingliz tili darajangizni tanlang:</b>";
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
@@ -261,7 +283,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         userRepository.save(profile);
 
         String successText = "🎉 <b>Ajoyib! Darajangiz belgilandi:</b> " + level.getDisplayName() + "\n\n" +
-                "Endi har kuni sizga aynan <b>" + level.getDisplayName() + "</b> darajasidagi 20 ta yangi mnemonik so'z va mustahkamlovchi mashqlar beriladi.\n\n" +
+                "Endi har kuni sizga aynan <b>" + level.getDisplayName() + "</b> darajasidagi 20 ta yangi mnemonik so'z, audio talaffuzlar va mustahkamlovchi mashqlar beriladi.\n\n" +
                 "👇 O'rganishni boshlash uchun pastdagi menyudan kerakli bo'limni tanlang:";
 
         SendMessage message = new SendMessage();
@@ -283,11 +305,17 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         String levelName = profile.getSelectedLevel() != null ? profile.getSelectedLevel().getDisplayName() : "Tanlanmagan";
 
         String welcomeText = "👋 <b>Assalomu alaykum, " + escapeHtml(name) + "!</b>\n\n" +
-                "🧠 <b>Ingliz Tili Mnemonika Boti</b>\n\n" +
+                "🧠 <b>Ingliz Tili Mnemonika Botiga xush kelibsiz!</b>\n\n" +
+                "✨ <b>YANGILANISHLAR VA YANGI IMKONIYATLAR:</b>\n" +
+                "• 🔊 <b>Haqiqiy Audio Talaffuz:</b> Endi har bir so'zning sof inglizcha ovozli o'qilishini eshitishingiz mumkin!\n" +
+                "• 🧠 <b>4-Bosqichli Kreativ Metodika:</b> Fonetik ilmoq, kinematik tasavvur, kontekst va xotirani faollashtirish.\n" +
+                "• ⏰ <b>Kreativ Kunlik Eslatmalar:</b> Har kuni yangicha neyro-xotira layfhaklari va Kun So'zi tizerlari.\n\n" +
+                "━━━━━━━━━━━━━━━━━━━━━\n" +
                 "🎯 <b>Tanlangan daraja:</b> " + levelName + "\n" +
                 "🔥 <b>Joriy Streak:</b> " + streak + " kun ketma-ket\n" +
-                "📚 <b>Bugungi Dars:</b> " + profile.getCurrentDayIndex() + "-kunlik to'plam (20 ta so'z)\n\n" +
-                "👇 O'rganish uchun kerakli bo'limni tanlang:";
+                "📚 <b>Bugungi Dars:</b> " + profile.getCurrentDayIndex() + "-kunlik to'plam (20 ta so'z)\n" +
+                "━━━━━━━━━━━━━━━━━━━━━\n\n" +
+                "👇 O'rganishni boshlash uchun quyidagi menyudan tanlang:";
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
@@ -310,9 +338,17 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         List<Word> todayWords = dailyLessonService.getTodayWords(profile);
         int currentWordIdx = profile.getCurrentWordInDay();
         int totalWords = todayWords.size();
+        Word currentWord = todayWords.get(Math.max(0, Math.min(currentWordIdx, totalWords - 1)));
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        // 🔊 Audio talaffuz tugmasi
+        List<InlineKeyboardButton> audioRow = new ArrayList<>();
+        InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 O'qilishi & Talaffuz (Audio)");
+        audioBtn.setCallbackData("audio_word_" + currentWord.getEnglishWord().toLowerCase());
+        audioRow.add(audioBtn);
+        rows.add(audioRow);
 
         List<InlineKeyboardButton> navRow = new ArrayList<>();
         if (currentWordIdx > 0) {
@@ -493,8 +529,15 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
 
+        // Audio talaffuz tugmasi
+        List<InlineKeyboardButton> audioRow = new ArrayList<>();
+        InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 So'z talaffuzini eshitish");
+        audioBtn.setCallbackData("audio_word_" + currentEx.getRelatedWord().getEnglishWord().toLowerCase());
+        audioRow.add(audioBtn);
+        rows.add(audioRow);
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
         if (!session.isCompleted()) {
             InlineKeyboardButton nextBtn = new InlineKeyboardButton("➡️ Keyingi mashq (" + (session.getCurrentIndex() + 1) + "/" + session.getTotalQuestions() + ")");
             nextBtn.setCallbackData("exercise_next_question");
@@ -571,7 +614,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         sb.append("⏰ <b>KUNLIK ESLATMA SOZLAMALARI:</b>\n\n");
         sb.append("🔔 <b>Holati:</b> ").append(status).append("\n");
         sb.append("🕒 <b>Eslatma vaqti:</b> Har kuni soat <b>").append(timeStr).append("</b> da\n\n");
-        sb.append("💡 <i>Bot har kuni belgilangan vaqtda sizga yangi 20 ta so'zni o'rganishni va Streak'ni saqlashni eslatib turadi.</i>\n\n");
+        sb.append("💡 <i>Bot har kuni belgilangan vaqtda sizga har xil kreativ mavzudagi bildirishnomalar, Kun So'zi audio talaffuzi va Streak saqlash eslatmalarini yuboradi.</i>\n\n");
         sb.append("👇 O'zingizga qulay vaqtni tanlang yoki eslatmani o'zgartiring:");
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
@@ -630,7 +673,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     }
 
     // =========================================================================
-    // 🎲 TASODIFIY SO'Z & QIDIRUV
+    // 🎲 TASODIFIY SO'Z & QIDIRUV & AUDIO
     // =========================================================================
     private void sendRandomWord(long chatId, UserProfile profile) {
         Optional<Word> wordOpt = (profile.getSelectedLevel() != null)
@@ -658,6 +701,12 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
+        List<InlineKeyboardButton> audioRow = new ArrayList<>();
+        InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 O'qilishini eshitish (Audio)");
+        audioBtn.setCallbackData("audio_word_" + word.getEnglishWord().toLowerCase());
+        audioRow.add(audioBtn);
+        rows.add(audioRow);
+
         List<InlineKeyboardButton> row1 = new ArrayList<>();
         InlineKeyboardButton nextBtn = new InlineKeyboardButton("🎲 Yana boshqa so'z");
         nextBtn.setCallbackData("random_word");
@@ -682,7 +731,34 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         Optional<Word> wordOpt = wordRepository.findByKeyword(query);
         if (wordOpt.isPresent()) {
             Word word = wordOpt.get();
-            sendMessage(chatId, "🔍 <b>Topilgan so'z:</b>\n\n" + word.toFormattedCard());
+            SendMessage message = new SendMessage();
+            message.setChatId(String.valueOf(chatId));
+            message.setText("🔍 <b>Topilgan so'z:</b>\n\n" + word.toFormattedCard());
+            message.setParseMode("HTML");
+
+            InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+            List<InlineKeyboardButton> audioRow = new ArrayList<>();
+            InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 O'qilishini eshitish (Audio)");
+            audioBtn.setCallbackData("audio_word_" + word.getEnglishWord().toLowerCase());
+            audioRow.add(audioBtn);
+            rows.add(audioRow);
+
+            List<InlineKeyboardButton> row1 = new ArrayList<>();
+            InlineKeyboardButton randBtn = new InlineKeyboardButton("🎲 Boshqa so'z");
+            randBtn.setCallbackData("random_word");
+            row1.add(randBtn);
+            rows.add(row1);
+
+            markup.setKeyboard(rows);
+            message.setReplyMarkup(markup);
+
+            try {
+                execute(message);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
         } else {
             String notFoundText = "😔 Kechirasiz, '<b>" + escapeHtml(query) + "</b>' so'zi bo'yicha mnemonika topilmadi.\n\n" +
                     "💡 <i>Tavsiya:</i> Qidirish uchun inglizcha so'z (masalan: <code>lucid</code>, <code>frugal</code>) yoki menyudagi tugmalardan foydalaning.";
@@ -752,6 +828,12 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
             List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
+            List<InlineKeyboardButton> audioRow = new ArrayList<>();
+            InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 O'qilishini eshitish (Audio)");
+            audioBtn.setCallbackData("audio_word_" + word.getEnglishWord().toLowerCase());
+            audioRow.add(audioBtn);
+            rows.add(audioRow);
+
             List<InlineKeyboardButton> row1 = new ArrayList<>();
             InlineKeyboardButton nextBtn = new InlineKeyboardButton("🎲 Shu darajadagi boshqa so'z");
             nextBtn.setCallbackData(data);
@@ -765,6 +847,40 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
                 execute(message);
             } catch (TelegramApiException e) {
                 e.printStackTrace();
+            }
+        }
+    }
+
+    // =========================================================================
+    // 🔊 AUDIO TALAFFUZNI YUBORISH METODLARI
+    // =========================================================================
+    public void sendWordAudio(long chatId, Word word) {
+        SendVoice voice = audioService.createVoiceMessage(chatId, word);
+        if (voice != null) {
+            try {
+                execute(voice);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+        } else {
+            sendMessage(chatId, "⚠️ Audio talaffuzni yuklashda vaqtinchalik muammo yuz berdi.");
+        }
+    }
+
+    public void sendWordAudio(long chatId, String wordText) {
+        Optional<Word> wordOpt = wordRepository.findByKeyword(wordText);
+        if (wordOpt.isPresent()) {
+            sendWordAudio(chatId, wordOpt.get());
+        } else {
+            SendVoice voice = audioService.createVoiceMessage(chatId, wordText, "🔊 <b>Talaffuzi:</b> <code>" + wordText + "</code>");
+            if (voice != null) {
+                try {
+                    execute(voice);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                sendMessage(chatId, "⚠️ Audio talaffuzni yuklab bo'lmadi.");
             }
         }
     }
@@ -838,13 +954,20 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
 
+        // Audio tugmasi
+        List<InlineKeyboardButton> audioRow = new ArrayList<>();
+        InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 So'z talaffuzini eshitish");
+        audioBtn.setCallbackData("audio_word_" + question.getRelatedWord().getEnglishWord().toLowerCase());
+        audioRow.add(audioBtn);
+        rows.add(audioRow);
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
         InlineKeyboardButton nextQuiz = new InlineKeyboardButton("➡️ Keyingi savol");
         nextQuiz.setCallbackData("quiz_next");
         row1.add(nextQuiz);
-
         rows.add(row1);
+
         markup.setKeyboard(rows);
         editMessage.setReplyMarkup(markup);
 
@@ -860,10 +983,11 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     private void sendMnemonicGuide(long chatId) {
         String guide = "🧠 <b>Mnemonika Nima va U Qanday Ishlaydi?</b>\n\n" +
                 "Mnemonika — inson miyasining assotsiativ xotirasidan foydalanib, yangi ma'lumotlarni oson va uzoq muddatga eslab qolish san'atidir.\n\n" +
-                "🔑 <b>3 ta Oltin Qoida:</b>\n" +
-                "1. <b>Fonetik o'xshashlik:</b> Inglizcha so'z talaffuziga o'xshash o'zbekcha tanish so'z tanlanadi.\n" +
-                "2. <b>Jonli va g'ayritabiiy obraz:</b> Miya zerikarli faktlarni emas, kulgili, bo'rttirilgan va harakatli tasvirlarni yaxshi eslab qoladi.\n" +
-                "3. <b>Bog'lovchi hikoya:</b> Yangi so'zning asl ma'nosi bilan topilgan obraz bir-biriga mantiqiy bog'lanadi.\n\n" +
+                "🔑 <b>4 ta Oltin Qoida:</b>\n" +
+                "1. <b>Fonetik o'xshashlik (Ilmoq):</b> Inglizcha so'z talaffuziga o'xshash o'zbekcha tanish so'z tanlanadi.\n" +
+                "2. <b>Kinematik jonli obraz:</b> Miya zerikarli faktlarni emas, kulgili, bo'rttirilgan va harakatli tasvirlarni yaxshi eslab qoladi.\n" +
+                "3. <b>Bog'lovchi hikoya:</b> Yangi so'zning asl ma'nosi bilan topilgan obraz bir-biriga mantiqiy bog'lanadi.\n" +
+                "4. <b>Ovozli takrorlash (Audio):</b> So'zning to'g'ri talaffuzini eshitib, uni ovoz chiqarib 3 marta takrorlash xotirani mustahkamlaydi.\n\n" +
                 "✨ <b>Misol:</b>\n" +
                 "• So'z: <b>Abandon</b> [əˈbændən] — <i>Tashlab ketmoq</i>\n" +
                 "• Obraz: <i>A-bandomiz!</i>\n" +
