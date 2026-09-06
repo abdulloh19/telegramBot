@@ -194,34 +194,63 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             handleSetUserLevel(chatId, profile, data, messageId);
         } else if (data.equals("lesson_start")) {
             sendDailyLesson(chatId, profile, true, messageId);
-        } else if (data.equals("lesson_next")) {
-            dailyLessonService.nextWord(profile);
-            sendDailyLesson(chatId, profile, true, messageId);
-        } else if (data.equals("lesson_prev")) {
-            dailyLessonService.previousWord(profile);
-            sendDailyLesson(chatId, profile, true, messageId);
-        } else if (data.equals("lesson_audio_next")) {
-            List<Word> todayWords = dailyLessonService.getTodayWords(profile);
-            int curIdx = profile.getCurrentWordInDay();
-            if (curIdx < todayWords.size()) {
-                Word curWord = todayWords.get(curIdx);
-                sendWordAudio(chatId, curWord);
+        } else if (data.startsWith("lesson_next")) {
+            if (data.startsWith("lesson_next_")) {
+                int nextIdx = Integer.parseInt(data.replace("lesson_next_", ""));
+                profile.setCurrentWordInDay(nextIdx);
+                userRepository.save(profile);
+            } else {
                 dailyLessonService.nextWord(profile);
+            }
+            sendDailyLesson(chatId, profile, true, messageId);
+        } else if (data.startsWith("lesson_prev")) {
+            if (data.startsWith("lesson_prev_")) {
+                int prevIdx = Integer.parseInt(data.replace("lesson_prev_", ""));
+                profile.setCurrentWordInDay(prevIdx);
+                userRepository.save(profile);
+            } else {
+                dailyLessonService.previousWord(profile);
+            }
+            sendDailyLesson(chatId, profile, true, messageId);
+        } else if (data.startsWith("lesson_audio_next")) {
+            int targetIdx;
+            if (data.startsWith("lesson_audio_next_")) {
+                targetIdx = Integer.parseInt(data.replace("lesson_audio_next_", ""));
+            } else {
+                targetIdx = profile.getCurrentWordInDay();
+            }
+            List<Word> todayWords = dailyLessonService.getTodayWords(profile);
+            if (targetIdx >= 0 && targetIdx < todayWords.size()) {
+                Word curWord = todayWords.get(targetIdx);
+                sendWordAudio(chatId, curWord);
+                int nextIdx = Math.min(targetIdx + 1, todayWords.size() - 1);
+                profile.setCurrentWordInDay(nextIdx);
+                userRepository.save(profile);
                 sendDailyLesson(chatId, profile, false, 0);
             }
-        } else if (data.equals("lesson_audio_finish")) {
+        } else if (data.startsWith("lesson_audio_finish")) {
+            int targetIdx;
+            if (data.startsWith("lesson_audio_finish_")) {
+                targetIdx = Integer.parseInt(data.replace("lesson_audio_finish_", ""));
+            } else {
+                targetIdx = profile.getCurrentWordInDay();
+            }
             List<Word> todayWords = dailyLessonService.getTodayWords(profile);
-            int curIdx = profile.getCurrentWordInDay();
-            if (curIdx < todayWords.size()) {
-                Word curWord = todayWords.get(curIdx);
+            if (targetIdx >= 0 && targetIdx < todayWords.size()) {
+                Word curWord = todayWords.get(targetIdx);
                 sendWordAudio(chatId, curWord);
             }
             handleFinishDailyLesson(chatId, profile, 0);
-        } else if (data.equals("lesson_audio_current")) {
+        } else if (data.startsWith("lesson_audio_current")) {
+            int targetIdx;
+            if (data.startsWith("lesson_audio_current_")) {
+                targetIdx = Integer.parseInt(data.replace("lesson_audio_current_", ""));
+            } else {
+                targetIdx = profile.getCurrentWordInDay();
+            }
             List<Word> todayWords = dailyLessonService.getTodayWords(profile);
-            int curIdx = profile.getCurrentWordInDay();
-            if (curIdx < todayWords.size()) {
-                Word curWord = todayWords.get(curIdx);
+            if (targetIdx >= 0 && targetIdx < todayWords.size()) {
+                Word curWord = todayWords.get(targetIdx);
                 sendWordAudio(chatId, curWord);
             }
         } else if (data.equals("lesson_finish")) {
@@ -396,14 +425,14 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             // Asosiy tugma: Audio eshitish va avtomatik pastdan keyingi so'zga o'tish
             List<InlineKeyboardButton> audioNextRow = new ArrayList<>();
             InlineKeyboardButton audioNextBtn = new InlineKeyboardButton("🔊 Tinglash & Keyingi so'z (" + (currentWordIdx + 2) + "/" + totalWords + ") ▶️");
-            audioNextBtn.setCallbackData("lesson_audio_next");
+            audioNextBtn.setCallbackData("lesson_audio_next_" + currentWordIdx);
             audioNextRow.add(audioNextBtn);
             rows.add(audioNextRow);
         } else {
             // 20-so'zda bo'lsa: Audio eshitish va darsni tugatib mashqlarga o'tish
             List<InlineKeyboardButton> audioFinishRow = new ArrayList<>();
             InlineKeyboardButton audioFinishBtn = new InlineKeyboardButton("🔊 Tinglash & Mashqlarga o'tish (5 ta test) 🏁");
-            audioFinishBtn.setCallbackData("lesson_audio_finish");
+            audioFinishBtn.setCallbackData("lesson_audio_finish_" + currentWordIdx);
             audioFinishRow.add(audioFinishBtn);
             rows.add(audioFinishRow);
         }
@@ -412,17 +441,17 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         List<InlineKeyboardButton> navRow = new ArrayList<>();
         if (currentWordIdx > 0) {
             InlineKeyboardButton prevBtn = new InlineKeyboardButton("◀️ Oldingi");
-            prevBtn.setCallbackData("lesson_prev");
+            prevBtn.setCallbackData("lesson_prev_" + (currentWordIdx - 1));
             navRow.add(prevBtn);
         }
 
         InlineKeyboardButton countBtn = new InlineKeyboardButton("📌 " + (currentWordIdx + 1) + "/" + totalWords);
-        countBtn.setCallbackData("lesson_audio_current");
+        countBtn.setCallbackData("lesson_audio_current_" + currentWordIdx);
         navRow.add(countBtn);
 
         if (currentWordIdx < totalWords - 1) {
             InlineKeyboardButton nextBtn = new InlineKeyboardButton("Keyingi ▶️");
-            nextBtn.setCallbackData("lesson_next");
+            nextBtn.setCallbackData("lesson_next_" + (currentWordIdx + 1));
             navRow.add(nextBtn);
         }
         rows.add(navRow);
