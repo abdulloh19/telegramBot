@@ -219,6 +219,14 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         } else if (data.startsWith("audio_word_")) {
             String wordText = data.replace("audio_word_", "");
             sendWordAudio(chatId, wordText);
+        } else if (data.startsWith("exercise_audio_next_")) {
+            String wordText = data.replace("exercise_audio_next_", "");
+            sendWordAudio(chatId, wordText);
+            sendCurrentExerciseQuestion(chatId, profile, false, 0);
+        } else if (data.startsWith("quiz_audio_next_")) {
+            String wordText = data.replace("quiz_audio_next_", "");
+            sendWordAudio(chatId, wordText);
+            sendNewQuiz(chatId);
         }
     }
 
@@ -450,8 +458,59 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
     private void sendCurrentExerciseQuestion(long chatId, UserProfile profile, boolean isEdit, int messageId) {
         ExerciseSession session = activeExerciseSessions.get(chatId);
-        if (session == null || session.isCompleted()) {
+        if (session == null) {
             sendMessage(chatId, "Mashqlar topilmadi. '📝 Kunlik Mashqlar' tugmasi orqali yangi mashq boshlang.");
+            return;
+        }
+
+        if (session.isCompleted()) {
+            StreakService.StreakResult streakRes = exerciseService.completeExerciseSession(profile, session.getCorrectCount());
+            activeExerciseSessions.remove(chatId);
+
+            int total = session.getTotalQuestions();
+            int correct = session.getCorrectCount();
+            int percent = (int) Math.round(((double) correct / total) * 100);
+
+            StringBuilder resSb = new StringBuilder();
+            resSb.append("🏆 <b>MASHQLAR MUVAFFAQIYATLI YAKUNLANDI!</b> 🎓\n\n");
+            resSb.append("📊 <b>Natijangiz:</b> ").append(correct).append(" / ").append(total).append(" ta to'g'ri (").append(percent).append("%)\n");
+            resSb.append("🔥 <b>Streak:</b> ").append(streakRes.getCurrentStreak()).append(" kun ketma-ket!\n");
+            resSb.append("⭐️ <b>Jami yechilgan mashqlar:</b> ").append(profile.getTotalExercisesCompleted()).append(" ta\n\n");
+
+            if (percent == 100) {
+                resSb.append("🌟 <i>A'lo darajada! Siz bugungi barcha mnemonik so'zlarni 100% o'zlashtirdingiz!</i>");
+            } else if (percent >= 60) {
+                resSb.append("👍 <i>Yaxshi natija! Xato qilgan so'zlaringizni dars bo'limida yana bir bor ko'rib chiqing.</i>");
+            } else {
+                resSb.append("💪 <i>Harakatingiz tahsinga loyiq! '📅 Kunlik 20 ta so'z' bo'limi orqali qayta takrorlang.</i>");
+            }
+
+            InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+            List<InlineKeyboardButton> row1 = new ArrayList<>();
+
+            InlineKeyboardButton retryBtn = new InlineKeyboardButton("🔄 Qayta mashq qilish");
+            retryBtn.setCallbackData("exercise_start");
+            row1.add(retryBtn);
+
+            InlineKeyboardButton lessonBtn = new InlineKeyboardButton("📅 Bugungi 20 ta so'z");
+            lessonBtn.setCallbackData("lesson_start");
+            row1.add(lessonBtn);
+
+            rows.add(row1);
+            markup.setKeyboard(rows);
+
+            SendMessage resMsg = new SendMessage();
+            resMsg.setChatId(String.valueOf(chatId));
+            resMsg.setText(resSb.toString());
+            resMsg.setParseMode("HTML");
+            resMsg.setReplyMarkup(markup);
+
+            try {
+                execute(resMsg);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
             return;
         }
 
@@ -469,29 +528,16 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         }
         markup.setKeyboard(rows);
 
-        if (isEdit && messageId > 0) {
-            EditMessageText edit = new EditMessageText();
-            edit.setChatId(String.valueOf(chatId));
-            edit.setMessageId(messageId);
-            edit.setText(currentEx.getQuestionPrompt());
-            edit.setParseMode("HTML");
-            edit.setReplyMarkup(markup);
-            try {
-                execute(edit);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
-        } else {
-            SendMessage msg = new SendMessage();
-            msg.setChatId(String.valueOf(chatId));
-            msg.setText(currentEx.getQuestionPrompt());
-            msg.setParseMode("HTML");
-            msg.setReplyMarkup(markup);
-            try {
-                execute(msg);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
+        // Yangi xabar sifatida chiqarish (har doim pastda ko'rinishi uchun!)
+        SendMessage msg = new SendMessage();
+        msg.setChatId(String.valueOf(chatId));
+        msg.setText(currentEx.getQuestionPrompt());
+        msg.setParseMode("HTML");
+        msg.setReplyMarkup(markup);
+        try {
+            execute(msg);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
 
@@ -527,27 +573,35 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         session.nextQuestion();
 
+        String wordStr = currentEx.getRelatedWord().getEnglishWord().toLowerCase();
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
-        // Audio talaffuz tugmasi
-        List<InlineKeyboardButton> audioRow = new ArrayList<>();
-        InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 So'z talaffuzini eshitish");
-        audioBtn.setCallbackData("audio_word_" + currentEx.getRelatedWord().getEnglishWord().toLowerCase());
-        audioRow.add(audioBtn);
-        rows.add(audioRow);
-
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
         if (!session.isCompleted()) {
-            InlineKeyboardButton nextBtn = new InlineKeyboardButton("➡️ Keyingi mashq (" + (session.getCurrentIndex() + 1) + "/" + session.getTotalQuestions() + ")");
+            List<InlineKeyboardButton> row1 = new ArrayList<>();
+            InlineKeyboardButton audioNextBtn = new InlineKeyboardButton("🔊 Tinglash & Keyingi mashq (" + (session.getCurrentIndex() + 1) + "/" + session.getTotalQuestions() + ") ➡️");
+            audioNextBtn.setCallbackData("exercise_audio_next_" + wordStr);
+            row1.add(audioNextBtn);
+            rows.add(row1);
+
+            List<InlineKeyboardButton> row2 = new ArrayList<>();
+            InlineKeyboardButton nextBtn = new InlineKeyboardButton("➡️ Keyingi mashq (Audiosiz)");
             nextBtn.setCallbackData("exercise_next_question");
-            row1.add(nextBtn);
+            row2.add(nextBtn);
+            rows.add(row2);
         } else {
-            InlineKeyboardButton finishBtn = new InlineKeyboardButton("🏁 Natijani ko'rish");
+            List<InlineKeyboardButton> row1 = new ArrayList<>();
+            InlineKeyboardButton audioFinishBtn = new InlineKeyboardButton("🔊 Tinglash & Natijani ko'rish 🏁");
+            audioFinishBtn.setCallbackData("exercise_audio_next_" + wordStr);
+            row1.add(audioFinishBtn);
+            rows.add(row1);
+
+            List<InlineKeyboardButton> row2 = new ArrayList<>();
+            InlineKeyboardButton finishBtn = new InlineKeyboardButton("🏁 Natijani ko'rish (Audiosiz)");
             finishBtn.setCallbackData("exercise_next_question");
-            row1.add(finishBtn);
+            row2.add(finishBtn);
+            rows.add(row2);
         }
-        rows.add(row1);
         markup.setKeyboard(rows);
 
         EditMessageText edit = new EditMessageText();
@@ -561,11 +615,6 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             execute(edit);
         } catch (TelegramApiException e) {
             e.printStackTrace();
-        }
-
-        if (session.isCompleted()) {
-            StreakService.StreakResult streakRes = exerciseService.completeExerciseSession(profile, session.getCorrectCount());
-            activeExerciseSessions.remove(chatId);
         }
     }
 
@@ -952,21 +1001,21 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         editMessage.setText(response.toString());
         editMessage.setParseMode("HTML");
 
+        String quizWordStr = question.getRelatedWord().getEnglishWord().toLowerCase();
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
-        // Audio tugmasi
-        List<InlineKeyboardButton> audioRow = new ArrayList<>();
-        InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 So'z talaffuzini eshitish");
-        audioBtn.setCallbackData("audio_word_" + question.getRelatedWord().getEnglishWord().toLowerCase());
-        audioRow.add(audioBtn);
-        rows.add(audioRow);
-
         List<InlineKeyboardButton> row1 = new ArrayList<>();
-        InlineKeyboardButton nextQuiz = new InlineKeyboardButton("➡️ Keyingi savol");
-        nextQuiz.setCallbackData("quiz_next");
-        row1.add(nextQuiz);
+        InlineKeyboardButton audioNextQuiz = new InlineKeyboardButton("🔊 Tinglash & Keyingi savol ➡️");
+        audioNextQuiz.setCallbackData("quiz_audio_next_" + quizWordStr);
+        row1.add(audioNextQuiz);
         rows.add(row1);
+
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        InlineKeyboardButton nextQuiz = new InlineKeyboardButton("➡️ Keyingi savol (Audiosiz)");
+        nextQuiz.setCallbackData("quiz_next");
+        row2.add(nextQuiz);
+        rows.add(row2);
 
         markup.setKeyboard(rows);
         editMessage.setReplyMarkup(markup);
