@@ -200,6 +200,30 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         } else if (data.equals("lesson_prev")) {
             dailyLessonService.previousWord(profile);
             sendDailyLesson(chatId, profile, true, messageId);
+        } else if (data.equals("lesson_audio_next")) {
+            List<Word> todayWords = dailyLessonService.getTodayWords(profile);
+            int curIdx = profile.getCurrentWordInDay();
+            if (curIdx < todayWords.size()) {
+                Word curWord = todayWords.get(curIdx);
+                sendWordAudio(chatId, curWord);
+                dailyLessonService.nextWord(profile);
+                sendDailyLesson(chatId, profile, false, 0);
+            }
+        } else if (data.equals("lesson_audio_finish")) {
+            List<Word> todayWords = dailyLessonService.getTodayWords(profile);
+            int curIdx = profile.getCurrentWordInDay();
+            if (curIdx < todayWords.size()) {
+                Word curWord = todayWords.get(curIdx);
+                sendWordAudio(chatId, curWord);
+            }
+            handleFinishDailyLesson(chatId, profile, 0);
+        } else if (data.equals("lesson_audio_current")) {
+            List<Word> todayWords = dailyLessonService.getTodayWords(profile);
+            int curIdx = profile.getCurrentWordInDay();
+            if (curIdx < todayWords.size()) {
+                Word curWord = todayWords.get(curIdx);
+                sendWordAudio(chatId, curWord);
+            }
         } else if (data.equals("lesson_finish")) {
             handleFinishDailyLesson(chatId, profile, messageId);
         } else if (data.equals("dialog_show")) {
@@ -368,13 +392,23 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
-        // 🔊 Audio talaffuz tugmasi
-        List<InlineKeyboardButton> audioRow = new ArrayList<>();
-        InlineKeyboardButton audioBtn = new InlineKeyboardButton("🔊 O'qilishi & Talaffuz (Audio)");
-        audioBtn.setCallbackData("audio_word_" + currentWord.getEnglishWord().toLowerCase());
-        audioRow.add(audioBtn);
-        rows.add(audioRow);
+        if (currentWordIdx < totalWords - 1) {
+            // Asosiy tugma: Audio eshitish va avtomatik pastdan keyingi so'zga o'tish
+            List<InlineKeyboardButton> audioNextRow = new ArrayList<>();
+            InlineKeyboardButton audioNextBtn = new InlineKeyboardButton("🔊 Tinglash & Keyingi so'z (" + (currentWordIdx + 2) + "/" + totalWords + ") ▶️");
+            audioNextBtn.setCallbackData("lesson_audio_next");
+            audioNextRow.add(audioNextBtn);
+            rows.add(audioNextRow);
+        } else {
+            // 20-so'zda bo'lsa: Audio eshitish va darsni tugatib mashqlarga o'tish
+            List<InlineKeyboardButton> audioFinishRow = new ArrayList<>();
+            InlineKeyboardButton audioFinishBtn = new InlineKeyboardButton("🔊 Tinglash & Mashqlarga o'tish (5 ta test) 🏁");
+            audioFinishBtn.setCallbackData("lesson_audio_finish");
+            audioFinishRow.add(audioFinishBtn);
+            rows.add(audioFinishRow);
+        }
 
+        // Navigatsiya tugmalari
         List<InlineKeyboardButton> navRow = new ArrayList<>();
         if (currentWordIdx > 0) {
             InlineKeyboardButton prevBtn = new InlineKeyboardButton("◀️ Oldingi");
@@ -383,7 +417,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         }
 
         InlineKeyboardButton countBtn = new InlineKeyboardButton("📌 " + (currentWordIdx + 1) + "/" + totalWords);
-        countBtn.setCallbackData("noop");
+        countBtn.setCallbackData("lesson_audio_current");
         navRow.add(countBtn);
 
         if (currentWordIdx < totalWords - 1) {
@@ -395,7 +429,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         // Yakunlash va mashq tugmasi
         List<InlineKeyboardButton> actionRow = new ArrayList<>();
-        InlineKeyboardButton finishBtn = new InlineKeyboardButton("✅ Darsni tugatish & Mashqlarga o'tish");
+        InlineKeyboardButton finishBtn = new InlineKeyboardButton("✅ Darsni tugatish & Mashqlar");
         finishBtn.setCallbackData("lesson_finish");
         actionRow.add(finishBtn);
         rows.add(actionRow);
@@ -454,17 +488,29 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         rows.add(row1);
         markup.setKeyboard(rows);
 
-        EditMessageText edit = new EditMessageText();
-        edit.setChatId(String.valueOf(chatId));
-        edit.setMessageId(messageId);
-        edit.setText(sb.toString());
-        edit.setParseMode("HTML");
-        edit.setReplyMarkup(markup);
-
-        try {
-            execute(edit);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
+        if (messageId > 0) {
+            EditMessageText edit = new EditMessageText();
+            edit.setChatId(String.valueOf(chatId));
+            edit.setMessageId(messageId);
+            edit.setText(sb.toString());
+            edit.setParseMode("HTML");
+            edit.setReplyMarkup(markup);
+            try {
+                execute(edit);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+        } else {
+            SendMessage msg = new SendMessage();
+            msg.setChatId(String.valueOf(chatId));
+            msg.setText(sb.toString());
+            msg.setParseMode("HTML");
+            msg.setReplyMarkup(markup);
+            try {
+                execute(msg);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
         }
     }
 
