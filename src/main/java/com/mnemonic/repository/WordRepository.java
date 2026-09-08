@@ -1,5 +1,6 @@
 package com.mnemonic.repository;
 
+import com.mnemonic.model.TargetLanguage;
 import com.mnemonic.model.Word;
 import com.mnemonic.model.WordLevel;
 
@@ -12,264 +13,333 @@ public class WordRepository {
     public static final int WORDS_PER_DAY = 20;
 
     public WordRepository() {
-        initData();
+        initEnglishWords();
+        initRussianWords();
     }
 
-    private void initData() {
+    private void initEnglishWords() {
         // =========================================================================
-        // 🟢 BOSHLANG'ICH DARAJA (BEGINNER: A1 - A2) — 20 TA SO'Z
+        // 🟢 BOSHLANG'ICH DARAJA (BEGINNER: A1 - A2) — 20 TA INGLIZCHA SO'Z
         // =========================================================================
         words.add(new Word("abandon", "[əˈbændən]", "Tashlab ketmoq, tark etmoq", "A-bandomiz!",
                 "Kemada ketayotgan qaroqchilar kema cho'kayotganini ko'rib, 'A, bandomiz!' deb qichqirib kemani tashlab qochishdi.",
-                "They had to abandon their car in the heavy snow.", "Ular qalin qorda mashinalarini tashlab ketishga majbur bo'lishdi.", WordLevel.BEGINNER));
+                "They had to abandon their car in the heavy snow.", "Ular qalin qorda mashinalarini tashlab ketishga majbur bo'lishdi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("curious", "[ˈkjʊəriəs]", "Qiziquvchan, sinchkov", "Kuryer",
                 "Har safar kuryer eshik qoqqanida, qutida nima borligini bilishga oshiqadigan o'ta qiziquvchan mushuk yugurib keladi.",
-                "Cats are naturally curious animals.", "Mushuklar tabiatan qiziquvchan hayvonlardir.", WordLevel.BEGINNER));
+                "Cats are naturally curious animals.", "Mushuklar tabiatan qiziquvchan hayvonlardir.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("drowsy", "[ˈdraʊzi]", "Uyqusiragan, mudragan", "Dori",
                 "Kasal bo'lib kuchli tinchlantiruvchi dori ichgach, ko'zlari suzilib uyqusirab qoldi.",
-                "The medication made him feel very drowsy.", "Dori uni juda uyqusiratib qo'ydi.", WordLevel.BEGINNER));
+                "The medication made him feel very drowsy.", "Dori uni juda uyqusiratib qo'ydi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("hesitate", "[ˈhezɪteɪt]", "Ikkilanmoq, taraddudlanmoq", "Hech aytolmaslik",
                 "Sinf oldida turib to'g'ri javobni 'hech aytolmay' ikkilanib turgan o'quvchi.",
-                "Do not hesitate to ask questions if you need help.", "Agar yordam kerak bo'lsa, savol berishga ikkilanmang.", WordLevel.BEGINNER));
+                "Do not hesitate to ask questions if you need help.", "Agar yordam kerak bo'lsa, savol berishga ikkilanmang.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("fragile", "[ˈfrædʒaɪl]", "Mo'rt, tez sinuvchan", "Frajer / Freza",
                 "Pochtadan kelgan qutiga 'Fragile' yozilgan, chunki ichidagi billur vaza juda nozik va tez sinadi.",
-                "Be careful with that box, the glasses inside are fragile.", "Bu qutini ehtiyot qiling, ichidagi stakanlar mo'rt.", WordLevel.BEGINNER));
+                "Be careful with that box, the glasses inside are fragile.", "Bu qutini ehtiyot qiling, ichidagi stakanlar mo'rt.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("novice", "[ˈnɒvɪs]", "Yangi boshlovchi, havaskor", "Novvoy shogird",
                 "Novvoyxonada non yopishni endigina o'rganayotgan yangi boshlovchi shogird.",
-                "He is still a novice in computer programming.", "U dasturlashda hali yangi boshlovchi.", WordLevel.BEGINNER));
+                "He is still a novice in computer programming.", "U dasturlashda hali yangi boshlovchi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("quench", "[kwentʃ]", "Qondirmoq (chanqoqni)", "Qaynoq choy / Kventin",
                 "Jazirama issiqda muzdek ko'k choy ichib o'z chanqog'ini qondirdi.",
-                "A glass of cold water will quench your thirst.", "Bir stakan sovuq suv chanqog'ingizni qondiradi.", WordLevel.BEGINNER));
+                "A glass of cold water will quench your thirst.", "Bir stakan sovuq suv chanqog'ingizni qondiradi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("obstacle", "[ˈɒbstəkl]", "To'siq, g'ov", "Ob-stakan (Katta stakan)",
                 "Yugurish yo'lakchasida bahaybat stakan to'siq bo'lib turibdi va sportchi undan sakrab o'tdi.",
-                "Fear is the biggest obstacle to success.", "Qo'rquv — muvaffaqiyat yo'lidagi eng katta to'siqdir.", WordLevel.BEGINNER));
+                "Fear is the biggest obstacle to success.", "Qo'rquv — muvaffaqiyat yo'lidagi eng katta to'siqdir.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("marvellous", "[ˈmɑːvələs]", "Ajoyib, hayratlanarli", "Marvel",
                 "Marvel kinolaridagi kabi hayratlanarli va ajoyib sehrli manzara.",
-                "We had a marvellous time at the beach yesterday.", "Biz kecha plyajda ajoyib vaqt o'tkazdik.", WordLevel.BEGINNER));
+                "We had a marvellous time at the beach yesterday.", "Biz kecha plyajda ajoyib vaqt o'tkazdik.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("candid", "[ˈkændɪd]", "Samimiy, ochiqko'ngil", "Kand / Konfet",
                 "Do'stlariga shirin konfet ulashib, ko'nglidagi bor gapni ochiq va samimiy aytadigan inson.",
-                "He gave a candid interview about his past mistakes.", "U o'tmishdagi xatolari haqida samimiy intervyu berdi.", WordLevel.BEGINNER));
+                "He gave a candid interview about his past mistakes.", "U o'tmishdagi xatolari haqida samimiy intervyu berdi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("frugal", "[ˈfruːɡl]", "Tejamkor, tejab sarflaydigan", "Frukta (Arzon meva)",
                 "Bozordan faqat arzon frukta/meva sotib olib, har bir tiyinini tejaydigan odam.",
-                "They lived a very frugal life to save for a new house.", "Ular yangi uyga pul yig'ish uchun juda tejamkor hayot kechirishdi.", WordLevel.BEGINNER));
+                "They lived a very frugal life to save for a new house.", "Ular yangi uyga pul yig'ish uchun juda tejamkor hayot kechirishdi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("carnivore", "[ˈkɑːnɪvɔːr]", "Go'shtxo'r hayvon", "Qorinda bor",
                 "Go'shtxo'r sherning qornida faqat go'sht bor, u aslo o't yemaydi.",
-                "Lions and tigers are examples of carnivores.", "Sherlar va yo'lbarslar go'shtxo'rlarga misoldir.", WordLevel.BEGINNER));
+                "Lions and tigers are examples of carnivores.", "Sherlar va yo'lbarslar go'shtxo'rlarga misoldir.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("lucid", "[ˈluːsɪd]", "Ravshan, tiniq, tushunarli", "Lyustra",
                 "Zaldagi yangi kristall lyustra yonganida butun xona tiniq va ravshan bo'lib ketdi.",
-                "The professor gave a lucid explanation of the complex theory.", "Professor murakkab nazariyani ravshan va tushunarli tushuntirdi.", WordLevel.BEGINNER));
+                "The professor gave a lucid explanation of the complex theory.", "Professor murakkab nazariyani ravshan va tushunarli tushuntirdi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("ancient", "[ˈeɪnʃənt]", "Qadimiy, ko'hna", "Anjir / Eshon",
                 "Qadimiy eshonlar bog'idagi 500 yillik anjir daraxti ostida suhbatlashishdi.",
-                "Rome is famous for its ancient monuments.", "Rim o'zining qadimiy yodgorliklari bilan mashhur.", WordLevel.BEGINNER));
+                "Rome is famous for its ancient monuments.", "Rim o'zining qadimiy yodgorliklari bilan mashhur.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("brave", "[breɪv]", "Jasur, qo'rqmas, botir", "Beret / Breker",
                 "Qizil beret kiyib daryoga cho'kayotgan bolani qutqarib qolgan jasur yigit.",
-                "The brave firefighter rescued the cat from the fire.", "Jasur o't o'chiruvchi mushukni olovdan qutqardi.", WordLevel.BEGINNER));
+                "The brave firefighter rescued the cat from the fire.", "Jasur o't o'chiruvchi mushukni olovdan qutqardi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("calm", "[kɑːm]", "Xotirjam, tinch, osoyishta", "Qalam / Komil",
                 "Qo'liga qalam olib, shovqin-suron orasida ham xotirjam rasm chizib o'tirgan Komil.",
-                "Try to stay calm during the exam.", "Imtihon paytida xotirjam bo'lishga harakat qiling.", WordLevel.BEGINNER));
+                "Try to stay calm during the exam.", "Imtihon paytida xotirjam bo'lishga harakat qiling.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("eager", "[ˈiːɡər]", "Ishtiyoqmand, chanqoq", "Igor / O'g'ri",
                 "Yangi chet tilini o'rganishga o'ta ishtiyoqmand talaba har kuni 3 soat shug'ullanadi.",
-                "The students were eager to start the new project.", "Talabalar yangi loyihani boshlashga ishtiyoqmand edilar.", WordLevel.BEGINNER));
+                "The students were eager to start the new project.", "Talabalar yangi loyihani boshlashga ishtiyoqmand edilar.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("fierce", "[fɪəs]", "Shiddatli, yirtqich, quturgan", "Fursat / Fikr",
                 "O'rmonda kutilmaganda shiddatli va yirtqich qora bo'riga duch kelishdi.",
-                "A fierce storm destroyed several houses in the village.", "Shiddatli bo'ron qishloqdagi bir nechta uylarni vayron qildi.", WordLevel.BEGINNER));
+                "A fierce storm destroyed several houses in the village.", "Shiddatli bo'ron qishloqdagi bir nechta uylarni vayron qildi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("generous", "[ˈdʒenərəs]", "Saxiy, qo'li ochiq", "General",
                 "O'zining barcha maoshini muhtojlarga ulashgan saxiy general.",
-                "It was generous of you to pay for dinner.", "Kechki ovqat uchun to'laganingiz juda saxiy ish bo'ldi.", WordLevel.BEGINNER));
+                "It was generous of you to pay for dinner.", "Kechki ovqat uchun to'laganingiz juda saxiy ish bo'ldi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         words.add(new Word("honest", "[ˈɒnɪst]", "Rostgo'y, to'g'riso'z, halol", "Onasi",
                 "Onasiga hech qachon yolg'on gapirmaydigan, doim haqiqatni aytadigan rostgo'y bola.",
-                "He gave an honest answer to the difficult question.", "U qiyin savolga rostgo'y javob berdi.", WordLevel.BEGINNER));
-
-
-        // =========================================================================
-        // 🟡 O'RTA DARAJA (INTERMEDIATE: B1 - B2) — 20 TA SO'Z
-        // =========================================================================
-        words.add(new Word("ambitious", "[æmˈbɪʃəs]", "Maqsadga intiluvchan, shijoatli", "Anjir yeb...",
-                "Anjir mevasini yeb o'tirib 'Men bu yil albatta Garvardga kiraman!' deb ulkan rejalar tuzayotgan shijoatli yigit.",
-                "She is an ambitious student who wants to be a CEO.", "U bosh direktor bo'lishni xohlaydigan intiluvchan talaba.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("perish", "[ˈperɪʃ]", "Halok bo'lmoq, yo'q bo'lmoq", "Parij",
-                "Katta muzlik davrida butun Parij shahri muz ostida qolib nobud bo'ldi deb tasavvur qiling.",
-                "Without water, all living creatures will perish.", "Suvsiz barcha tirik mavjudotlar halok bo'ladi.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("deter", "[dɪˈtɜːr]", "Qaytarmoq, to'xtatib qolmoq", "Devor / Detektor",
-                "Baland tikanli devor va detektor o'g'rini hovliga kirishdan to'xtatib qoldi.",
-                "High security cameras deter criminals from stealing.", "Yuqori darajadagi xavfsizlik kameralari jinoyatchilarni o'g'rilikdan qaytaradi.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("elated", "[ɪˈleɪtɪd]", "Quvonchdan boshi osmonda", "Elita / Ilhaq",
-                "Eng yaxshi elita universitetiga qabul qilinganini eshitib, quvonchdan boshi osmonga yetdi.",
-                "She was elated when she received the job offer.", "U ish taklifini olganida quvonchdan boshi osmonda edi.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("pragmatic", "[præɡˈmætɪk]", "Amaliy, tajribaga asoslangan", "Praktika",
-                "Quruq orzular bilan emas, hayotiy praktika (tajriba) va reallikka qarab ish tutadigan kishi.",
-                "We need a pragmatic solution to this financial problem.", "Ushbu moliyaviy muammoga amaliy yechim kerak.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("dormant", "[ˈdɔːmənt]", "Harakatsiz, uxlab yotgan", "Dormon / Dormir",
-                "Yuz yillardan buyon hech qanday harakat bildirmay uxlab yotgan qadimgi vulqon.",
-                "The volcano has been dormant for hundreds of years.", "Vulqon yuzlab yillar davomida harakatsiz yotgan.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("feasible", "[ˈfiːzəbl]", "Amalga oshirsa bo'ladigan, real", "Fizika",
-                "Fizika qonunlariga to'la mos keladigan va real amalga oshirsa bo'ladigan texnologik reja.",
-                "It is a feasible project that can be completed in two months.", "Bu ikki oy ichida amalga oshirsa bo'ladigan reja.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("hostile", "[ˈhɒstaɪl]", "Dushmanona, adovatli", "Hostel / Qostil",
-                "Arzon hostelga kirgan sayyohlarga xo'jayin dushmanona va tajovuzkor nigoh bilan qaradi.",
-                "They found themselves in a hostile environment.", "Ular o'zlarini dushmanona muhitda ko'rishdi.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("lenient", "[ˈliːniənt]", "Yumshoqko'ngil, rahmdil (jazolashda)", "Lenin / Lenta",
-                "Qoidani buzgan o'quvchiga qattiq jazo bermasdan yumshoq muomala qilgan murabbiy.",
-                "The judge was lenient because it was his first offense.", "Sudya birinchi marta bo'lgani uchun unga nisbatan yumshoq bo'ldi.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("notorious", "[nəʊˈtɔːriəs]", "Yomon oti chiqqan, badnom", "Notarius / Motor",
-                "Soxta motor va mashinalar savdosi tufayli butun shaharga yomon oti chiqqan qallob.",
-                "The company is notorious for paying low salaries.", "Kompaniya kam maosh to'lashi bilan badnom bo'lgan.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("reluctant", "[rɪˈlʌktənt]", "Istaksiz, xohlamay turgan", "Rul va lak",
-                "Yangi bo'yalgan tirnog'ining laki buzilmasligi uchun mashina rulini istaksiz ushlagan qiz.",
-                "He was reluctant to talk about his difficult childhood.", "U qiyin bolaligi haqida gapirishga istaksiz edi.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("vulnerable", "[ˈvʌlnərəbl]", "Zaif, himoyasiz", "Vulqon va bola",
-                "Otilayotgan qizg'in vulqon yonida hech qanday qalqonsiz qolgan zaif va himoyasiz odam.",
-                "Old people are particularly vulnerable to the winter flu.", "Keksalar qishki shamollashga ayniqsa zaif bo'ladilar.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("diligent", "[ˈdɪlɪdʒənt]", "Tirishqoq, mehnatsevar", "Dilshod / Diler",
-                "Kechayu kunduz tinmay kitob o'qib IELTS dan 8.5 olgan mehnatsevar Dilshod.",
-                "She is a diligent worker who always finishes tasks on time.", "U topshiriqlarni doim vaqtida bajaradigan mehnatsevar xodim.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("gullible", "[ˈɡʌləbl]", "Tez ishonuvchan, soddadil", "Galuboy / Gul",
-                "Kim nima desa darhol ishonib qoladigan, aldanib qolishi oson soddadil inson.",
-                "Don't be so gullible, you shouldn't believe everything online.", "Bunchalik sodda bo'lmang, internetdagi hamma narsaga ishonmang.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("obstinate", "[ˈɒbstɪnət]", "O'jar, qaysar, so'zida turib oluvchi", "Ob-stakan ustidagi eshak",
-                "Ko'prik ustida to'xtab olib, hech kimning gapiga kirmay o'jarlik qilayotgan eshak.",
-                "He can be very obstinate when he thinks he is right.", "O'zini haq deb bilganida u juda o'jar bo'lib qoladi.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("adequate", "[ˈædɪkwət]", "Yetarli, munosib, qoniqarli", "Adolat / Kvatira",
-                "Yangi ochilgan yotoqxonada talabalar uchun yetarli va qoniqarli sharoitlar yaratildi.",
-                "The room was small but adequate for our needs.", "Xona kichik edi, lekin bizning ehtiyojimiz uchun yetarli edi.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("concur", "[kənˈkɜːr]", "Fikriga qo'shilmoq, hamfikr bo'lmoq", "Konkurs / Konkret",
-                "Hakamlar hay'atining barcha a'zolari birinchi o'rin g'olibiga bir ovozdan qo'shilishdi.",
-                "I strongly concur with your opinion on this matter.", "Men bu masala bo'yicha sizning fikringizga to'liq qo'shilaman.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("deviate", "[ˈdiːvieɪt]", "Chetlashmoq, yo'ldan chiqmoq", "Devor / Divan",
-                "Katta magistral yo'ldan baland devor tomonga burilib chetlashib ketgan mashina.",
-                "Do not deviate from the agreed plan.", "Kelishilgan rejadan chetlashmang.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("exhibit", "[ɪɡˈzɪbɪt]", "Namoyish qilmoq, ko'rsatmoq", "Eksponat",
-                "Qadimiy san'at muzeyida o'zining nodir rasmlarini xalqqa namoyish qilgan rassom.",
-                "The gallery will exhibit paintings by local artists.", "Galereya mahalliy rassomlarning rasmlarini namoyish etadi.", WordLevel.INTERMEDIATE));
-
-        words.add(new Word("genuine", "[ˈdʒenjuɪn]", "Haqiqiy, soxta bo'lmagan, asl", "Jenya / Janub",
-                "Bozordagi soxta buyumlar orasidan topilgan haqiqiy va asl olmos uzuk.",
-                "This bag is made of genuine Italian leather.", "Bu sumka haqiqiy italyan charmidan qilingan.", WordLevel.INTERMEDIATE));
-
+                "He gave an honest answer to the difficult question.", "U qiyin savolga rostgo'y javob berdi.", WordLevel.BEGINNER, TargetLanguage.ENGLISH));
 
         // =========================================================================
-        // 🔴 YUQORI DARAJA (ADVANCED / IELTS: C1 - C2) — 20 TA SO'Z
+        // 🟡 O'RTA DARAJA (INTERMEDIATE: B1 - B2) — INGLIZCHA
         // =========================================================================
-        words.add(new Word("resilient", "[rɪˈzɪliənt]", "Bardoshli, chidamli, qayishqoq", "Rezinka",
-                "Rezinka kabi qanchalik cho'zilsa yoki bosilsa ham, darhol o'z holiga qaytadigan irodali va bardoshli inson.",
-                "Children are remarkably resilient and adapt to changes quickly.", "Bolalar nihoyatda bardoshli bo'lib, o'zgarishlarga tez moslashadilar.", WordLevel.ADVANCED));
+        words.add(new Word("ambitious", "[æmˈbɪʃəs]", "Shijoatli, intiluvchan", "Ambitsiya",
+                "Katta ambitsiyasi bor yosh dasturchi xalqaro startap ochishga bel bog'ladi.",
+                "She has ambitious plans for her business career.", "Uning biznes faoliyati uchun katta intilishlari bor.", WordLevel.INTERMEDIATE, TargetLanguage.ENGLISH));
 
-        words.add(new Word("subtle", "[ˈsʌtl]", "Nozik, sezilarsiz", "Sopol / Sotil",
-                "Qadimiy sopol ko'zadagi naqshlar shunchalik nozikki, faqat diqqat bilan qaraganda seziladi.",
-                "There is a subtle difference between these two colors.", "Bu ikki rang o'rtasida nozik (sezilarsiz) farq bor.", WordLevel.ADVANCED));
+        words.add(new Word("pragmatic", "[præɡˈmætɪk]", "Amaliy, ishbilarmon", "Praktika",
+                "Faqat quruq nazariya emas, amaliy (praktik) yechimlarni tanlaydigan usta muhandis.",
+                "We need to adopt a pragmatic approach to this problem.", "Biz bu muammoga amaliy yondashuvni qo'llashimiz kerak.", WordLevel.INTERMEDIATE, TargetLanguage.ENGLISH));
 
-        words.add(new Word("lucrative", "[ˈluːkrətɪv]", "Juda foydali, mo'may daromadli", "Luk (Piyoz)",
-                "Bahorda katta yerga luk (piyoz) ekib eksport qilgan fermer mo'may daromadli foyda oldi.",
-                "Investing in real estate turned out to be a lucrative business.", "Ko'chmas mulkka sarmoya kiritish juda foydali biznes bo'lib chiqdi.", WordLevel.ADVANCED));
+        words.add(new Word("feasible", "[ˈfiːzəbl]", "Amalga oshirsa bo'ladigan, real", "Fizika / Fazo",
+                "Fazoga uchish ilgari xomxayol edi, ammo ilm-fan uni amalga oshadigan qildi.",
+                "The project is ambitious but financially feasible.", "Loyiha shijoatli, ammo moliyaviy jihatdan amalga oshirish mumkin.", WordLevel.INTERMEDIATE, TargetLanguage.ENGLISH));
 
-        words.add(new Word("meticulous", "[məˈtɪkjələs]", "Sinchkov, o'ta ehtiyotkor", "Matematik",
-                "Matematik olim har bir formulani mikroskopdek sinchkovlik bilan tekshirib chiqdi.",
-                "The architect was meticulous in every detail of the design.", "Arxitektor loyihaning har bir detalida o'ta sinchkov edi.", WordLevel.ADVANCED));
+        words.add(new Word("deter", "[dɪˈtɜːr]", "To'xtatmoq, qaytarmoq", "Daftar / Detektor",
+                "Xavfsizlik detektori o'g'rini do'kondan qimmatbaho buyumlarni o'g'irlashdan to'xtatib qoldi.",
+                "High prices will deter customers from buying new cars.", "Qimmat narxlar xaridorlarni yangi mashina sotib olishdan to'xtatadi.", WordLevel.INTERMEDIATE, TargetLanguage.ENGLISH));
 
-        words.add(new Word("zealous", "[ˈzeləs]", "G'ayratli, fidoyi, intiluvchan", "Zelen (Ko'kat)",
-                "Bahoriy barra zelen/ko'katlarni yeb kuchga to'lgan, o'z maqsadiga erishish uchun tinmay harakat qiladigan g'ayratli xodim.",
-                "He was a zealous supporter of environmental protection.", "U atrof-muhitni muhofaza qilishning g'ayratli tarafdori edi.", WordLevel.ADVANCED));
+        words.add(new Word("diligent", "[ˈdɪlɪdʒənt]", "Tirishqoq, mehnatsevar", "Dilkash agent",
+                "Har doim ishini sidqidildan, tirishqoqlik bilan bajaradigan dilkash agent.",
+                "Leo is very diligent in his English studies.", "Leo ingliz tili o'rganishda juda tirishqoq.", WordLevel.INTERMEDIATE, TargetLanguage.ENGLISH));
 
-        words.add(new Word("benevolent", "[bəˈnevələnt]", "Saxiy, mehribon, xayrixoh", "Bilet bepul",
-                "Muhtojlarga konsert biletlarini bepul tarqatuvchi saxiy va mehribon homiy.",
-                "The benevolent gentleman donated millions to the orphanage.", "Saxiy janob bolalar uyiga millionlab pul xayriya qildi.", WordLevel.ADVANCED));
+        words.add(new Word("elated", "[iˈleɪtɪd]", "Boshy osmonda, benihoya xursand", "Elita / Lenta",
+                "Musobaqa marra lentasini birinchi bo'lib kesib o'tgan yuguruvchi quvonchdan boshi osmonda edi.",
+                "She was elated when she passed the exam with top marks.", "Imtihondan eng yuqori ball bilan o'tganida uning quvonchi cheksiz edi.", WordLevel.INTERMEDIATE, TargetLanguage.ENGLISH));
 
-        words.add(new Word("alleviate", "[əˈliːvieɪt]", "Yengillashtirmoq (og'riqni)", "Ali va vata",
-                "Ali yaralangan do'stining og'riyotgan joyiga dorili paxta/vata qo'yib, uning og'rig'ini yengillashtirdi.",
-                "The doctor prescribed pills to alleviate the severe headache.", "Shifokor kuchli bosh og'rig'ini yengillashtirish uchun dori yozdi.", WordLevel.ADVANCED));
+        words.add(new Word("lenient", "[ˈliːniənt]", "Yumshoq ko'ngil, rahmdil", "Liniya / Lenin",
+                "O'quvchilarining kichik xatolarini kechirib, ularga juda yumshoq munosabatda bo'lgan o'qituvchi.",
+                "The judge was lenient towards the young offender.", "Sudya yosh huquqbuzarga nisbatan rahmdillik qildi.", WordLevel.INTERMEDIATE, TargetLanguage.ENGLISH));
 
-        words.add(new Word("versatile", "[ˈvɜːsətaɪl]", "Ko'p qirrali, har tomonlama moslashuvchan", "Versal",
-                "Versal saroyi kabi har qanday vaziyatga mos tushadigan, barcha sohada qobiliyatli inson.",
-                "Smartphone is a versatile tool for communication and learning.", "Smartfon aloqa va o'rganish uchun ko'p qirrali vositadir.", WordLevel.ADVANCED));
+        words.add(new Word("vulnerable", "[ˈvʌlnərəbl]", "Zaif, himoyasiz, nozik", "Volan / Valera",
+                "Katta bo'ronda qalin himoya devorisiz qolgan qishloq uylari juda zaif va himoyasiz edi.",
+                "Small businesses are vulnerable during an economic crisis.", "Kichik bizneslar iqtisodiy inqiroz paytida zaif bo'lib qoladilar.", WordLevel.INTERMEDIATE, TargetLanguage.ENGLISH));
 
-        words.add(new Word("scrutinize", "[ˈskruːtɪnaɪz]", "Sinchiklab tekshirmoq", "Skripka / Skrutka",
-                "Eski skripka ustasi har bir yog'och detalni lupa bilan sinchiklab tekshirib chiqdi.",
-                "The customs officers will scrutinize all passports carefully.", "Bojxona xodimlari barcha pasportlarni sinchiklab tekshiradilar.", WordLevel.ADVANCED));
+        words.add(new Word("reluctant", "[rɪˈlʌktənt]", "Istaksiz, ko'ngilsiz", "Rele / Lak",
+                "Bozorga borishni istamay, erinib, istaksizgina oyog'ini sudrab yurgan bola.",
+                "He was reluctant to discuss his personal feelings.", "U shaxsiy tuyg'ulari haqida gapirishga istaksiz edi.", WordLevel.INTERMEDIATE, TargetLanguage.ENGLISH));
 
-        words.add(new Word("gregarious", "[ɡrɪˈɡeəriəs]", "Kirishimli, do'stsevar", "Guruh",
-                "Yolg'iz qolishni yoqtirmaydigan, doimo katta guruhlar orasida yuradigan kirishimli yoshlar.",
-                "Being gregarious, he made friends very easily in the new school.", "Kirishimli bo'lgani uchun, u juda tez do'stlar orttirdi.", WordLevel.ADVANCED));
+        // =========================================================================
+        // 🔴 YUQORI DARAJA (ADVANCED: C1 - C2 / IELTS) — INGLIZCHA
+        // =========================================================================
+        words.add(new Word("ubiquitous", "[juːˈbɪkwɪtəs]", "Hamma yerda hoziru nozir, keng tarqalgan", "Yubka / Yulduz",
+                "Bugungi kunda smartfonlar xuddi havodek hamma yerda bor va keng tarqalgan.",
+                "Smartphones have become ubiquitous in modern society.", "Zamonaviy jamiyatda smartfonlar hamma joyda uchraydigan bo'lib qoldi.", WordLevel.ADVANCED, TargetLanguage.ENGLISH));
 
-        words.add(new Word("opulent", "[ˈɒpjələnt]", "Hashamatli, o'ta boy", "Opal toshlari / Pul",
-                "Xonalariga qimmatbaho opal toshlari qadalgan va oltin bilan bezatilgan hashamatli qasr.",
-                "The king lived in an opulent palace surrounded by gold.", "Qirol oltinlar bilan o'ralgan hashamatli saroyda yashardi.", WordLevel.ADVANCED));
+        words.add(new Word("ephemeral", "[ɪˈfemərəl]", "O'tkinchi, qisqa muddatli", "Efir / Fermer",
+                "Efirga uzatilgan chaqmoqdek yorqin, ammo bir zumda yo'qoladigan o'tkinchi kamalak.",
+                "Fame in the social media era is often ephemeral.", "Ijtimoiy tarmoqlar asrida shon-shuhrat ko'pincha o'tkinchi bo'ladi.", WordLevel.ADVANCED, TargetLanguage.ENGLISH));
 
-        words.add(new Word("coerce", "[kəʊˈɜːs]", "Majburlamoq, zo'rlamoq", "Ko'r ko'rsatkich",
-                "Ko'ziga qora mato bog'lab, qog'ozga imzo chekishga majburlashdi.",
-                "You cannot coerce someone into loving you.", "Siz kimnidir sizni sevishga majburlay olmaysiz.", WordLevel.ADVANCED));
+        words.add(new Word("meticulous", "[məˈtɪkjələs]", "O'ta sinchkov, mayda-chuydasigacha e'tiborli", "Metr / Qalam",
+                "Har bir santimetrni sinchkovlik bilan o'lchab, mayda nuqsonlarni ham qoldirmaydigan zargar.",
+                "The scientist kept meticulous records of every experiment.", "Olim har bir tajribaning o'ta sinchkovlik bilan hisobini yuritdi.", WordLevel.ADVANCED, TargetLanguage.ENGLISH));
 
-        words.add(new Word("plausible", "[ˈplɔːzəbl]", "Haqiqatga yaqin, ishonarli", "Plastilin",
-                "Plastilindek shakl berilgan, eshitganda haqiqatga yaqin va ishonarli tuyuladigan bahona.",
-                "His excuse sounded plausible, so the teacher believed him.", "Uning bahonasi ishonarli eshitildi, shuning uchun ustoz ishondi.", WordLevel.ADVANCED));
+        words.add(new Word("resilient", "[rɪˈzɪliənt]", "Chidamli, egiluvchan, qayta tiklanuvchan", "Rezinka",
+                "Rezinkadek qattiq cho'zilsa ham uzilmay, darhol o'z holiga qaytadigan chidamli va matonatli inson.",
+                "Local communities proved resilient after the earthquake.", "Mahalliy aholi zilziladan so'ng chidamli va matonatli ekanligini isbotladi.", WordLevel.ADVANCED, TargetLanguage.ENGLISH));
 
-        words.add(new Word("superficial", "[ˌsuːpəˈfɪʃl]", "Yuzaki, sayoz", "Super fish (Baliq)",
-                "Okeanning chuquriga kirmay, faqat suvning eng ustki yuzasida suzuvchi sayoz baliq.",
-                "He only has a superficial knowledge of French.", "U fransuz tilini faqat yuzaki darajada biladi.", WordLevel.ADVANCED));
+        words.add(new Word("pristine", "[ˈprɪstiːn]", "Bokira, toza, qo'l tegilmagan", "Pristan / Pristav",
+                "Orollardagi odam oyog'i yetmagan, tiniq va musaffo bokira plyajlar.",
+                "The divers explored pristine coral reefs in the ocean.", "G'avvoslar okeandagi bokira va qo'l tegilmagan marjon qoyalarini o'rgandilar.", WordLevel.ADVANCED, TargetLanguage.ENGLISH));
 
-        words.add(new Word("tenacious", "[təˈneɪʃəs]", "Tirishqoq, mahkam yopishuvchi", "Tennischi",
-                "Mag'lubiyatga tan bermay oxirgi to'pgacha tirishqoqlik bilan kurashuvchi mahoratli tennischi.",
-                "She is a tenacious fighter who never gives up on her dreams.", "U orzulari yo'lida hech qachon taslim bo'lmaydigan tirishqoq kurashchi.", WordLevel.ADVANCED));
+        words.add(new Word("eloquent", "[ˈeləkwənt]", "Notiq, so'zga usta, fasohatli", "Elektron / Kvant",
+                "Sahnaga chiqib tinglovchilarni o'zining fasohatli nutqi bilan sehrlab qo'ygan so'zga usta notiq.",
+                "She delivered an eloquent speech at the international summit.", "U xalqaro sammitda notiqlarcha ta'sirli nutq so'zladi.", WordLevel.ADVANCED, TargetLanguage.ENGLISH));
 
-        words.add(new Word("abundant", "[əˈbʌndənt]", "Mo'l-ko'l, serob", "Obod / Banan",
-                "Obod qilingan yangi bog'da minglab banan va mevalar mo'l-ko'l bo'lib pishdi.",
-                "The region has an abundant supply of fresh water.", "Bu hududda toza ichimlik suvi mo'l-ko'ldir.", WordLevel.ADVANCED));
+        words.add(new Word("tenacious", "[təˈneɪʃəs]", "Qat'iyatli, yengilmas, mahkam tutuvchi", "Tennischi",
+                "Qiyin vaziyatda ham taslim bo'lmay, g'alaba sari intiladigan qat'iyatli professional tennischi.",
+                "A tenacious defense attorney never gives up easily.", "Qat'iyatli advokat hech qachon osonlikcha taslim bo'lmaydi.", WordLevel.ADVANCED, TargetLanguage.ENGLISH));
+    }
 
-        words.add(new Word("belligerent", "[bəˈlɪdʒərənt]", "Urushqoq, tajovuzkor", "Bilyardchi",
-                "Bilyard o'yinida yutqazib qo'yib, har bir o'yinchiga urushqoqlik qilgan tajovuzkor odam.",
-                "His belligerent attitude made him unpopular with colleagues.", "Uning urushqoq munosabati tufayli hamkasblari uni yoqtirishmasdi.", WordLevel.ADVANCED));
+    private void initRussianWords() {
+        // =========================================================================
+        // 🟢 BOSHLANG'ICH DARAJA (BEGINNER: A1 - A2) — 20 TA RUSCHA SO'Z (1-KUNLIK TO'LIQ DARS)
+        // =========================================================================
+        words.add(new Word("Спасибо", "[спасúбо]", "Rahmat, tashakkur", "Spas / Qutqaruvchi",
+                "Cho'kayotgan bolani qutqargan qutqaruvchiga (spasatel) hamma bir ovozdan 'Spasibo — Rahmat!' deb minnatdorchilik bildirdi.",
+                "Большое спасибо за вашу тёплую помощь.", "Samimiy yordamingiz uchun katta rahmat.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
 
-        words.add(new Word("clandestine", "[klænˈdestɪn]", "Maxfiy, yashirin", "Klanning dasti",
-                "Maxfiy klanning dasti bilan tunda yashirin uchrashuv tashkil qilindi.",
-                "They held a clandestine meeting to discuss the secret plan.", "Ular maxfiy rejani muhokama qilish uchun yashirin uchrashuv o'tkazdilar.", WordLevel.ADVANCED));
+        words.add(new Word("Вдруг", "[вдруг]", "To'satdan, kutilmaganda, birdaniga", "Va do'st (v drug)",
+                "Ko'chada ketayotganimda, to'satdan va kutilmaganda eski do'stim (v drug) qarshimdan chiqib qoldi.",
+                "Вдруг пошёл сильный дождь, и все побежали.", "To'satdan kuchli yomg'ir yog'ib yubordi va hamma qochdi.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
 
-        words.add(new Word("eloquent", "[ˈeləkwənt]", "Notiq, shirinso'z, fasohatli", "Elektron / Qalam",
-                "Minbarga chiqib butun xalqni o'zining shirin va fasohatli nutqi bilan lol qoldirgan notiq.",
-                "His eloquent speech moved many in the audience to tears.", "Uning notiqlik bilan aytgan nutqi ko'pchilikni ko'z yoshiga soldi.", WordLevel.ADVANCED));
+        words.add(new Word("Мечта", "[мечтá]", "Orzu, armon", "Mech (Qilich)",
+                "Qadimiy ritsar afsonaviy o'tkir qilichni (mech) qo'lga kiritishni bolaligidan orzu qilardi.",
+                "Его главная мечта — стать известным врачом.", "Uning asosiy orzusi — taniqli shifokor bo'lish.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
 
-        words.add(new Word("ubiquitous", "[juːˈbɪkwɪtəs]", "Har yerda hoziru-nozir, hamma joyda uchraydigan", "USB / Yubiley",
-                "Bugungi kunda smartfonlar har bir insonning qo'lida hamma joyda uchraydigan buyumga aylandi.",
-                "Smartphones have become ubiquitous in modern everyday life.", "Smartfonlar zamonaviy hayotda hamma joyda uchraydigan bo'lib qoldi.", WordLevel.ADVANCED));
+        words.add(new Word("Победа", "[побéда]", "G'alaba, zafar", "Pobeda (mashina/kema)",
+                "Pobeda nomli tezyurar mashinadagi sportchilarimiz final poygasida buyuk g'alabani qo'lga kiritishdi.",
+                "Наша команда одержала блестящую победу.", "Bizning jamoamiz ajoyib g'alabaga erishdi.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Погода", "[погóда]", "Ob-havo", "Pa-goda (Yil davomida)",
+                "Bugun shunday musaffo ob-havo bo'ldiki, bir yilda (v god) bir marta shunday bo'ladi.",
+                "Завтра будет тёплая и солнечная погода.", "Ertaga iliq va quyoshli ob-havo bo'ladi.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Осторожно", "[осторóжно]", "Ehtiyotkorlik bilan, ohista", "Storoj (Qorovul)",
+                "Muzlagan ko'prikda qorovul (storoj) turib: 'Ehtiyotkorlik bilan yuring!' deb ogohlantirdi.",
+                "Держите эту чашку осторожно, она горячая.", "Bu piyolani ehtiyotkorlik bilan ushlang, u issiq.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Улыбка", "[улӹбка]", "Tabassum, kulgi", "Ulib / O'lib qolayozdi",
+                "Uning yuzidagi beg'ubor tabassumni ko'rib, barcha bolalar quvonchdan xursand bo'lishdi.",
+                "Её добрая улыбка подняла всем настроение.", "Uning samimiy tabassumi barchaning kayfiyatini ko'tardi.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Дружба", "[дрýжба]", "Do'stlik, o'rtoqlik", "Drujina (Askarlar guruhi)",
+                "Qadimgi drujina askarlari o'rtasidagi haqiqiy va sadoqatli do'stlik har qanday sinovdan o'tgan.",
+                "Настоящая дружба проверяется временем и трудностями.", "Haqiqiy do'stlik vaqt va qiyinchiliklar bilan sinovdan o'tadi.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Помощь", "[пóмощь]", "Yordam, ko'mak", "Po-moshch (Kuch-quvvat)",
+                "Katta kuch-quvvatga (moshch) ega pahlavon qiyin ahvolda qolgan qariyaga yordam qo'lini cho'zdi.",
+                "Мне срочно нужна ваша профессиональная помощь.", "Menga zudlik bilan sizning professional yordamingiz kerak.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Сказка", "[скáзка]", "Ertak, afsona", "Skazka / Ochki-skaska",
+                "Buvijonim ko'zoynak taqib, sham yorug'ida bizga sehrli ertak o'qib berar edilar.",
+                "Эта добрая сказка учит детей честности.", "Ushbu samimiy ertak bolalarni halollikka o'rgatadi.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Время", "[врéмя]", "Vaqt, soat", "Vremya / O'ram-ip",
+                "Vaqt xuddi g'altakdagi yupqa ipdek tez va to'xtovsiz aylanib o'tib ketadi.",
+                "У нас осталось совсем мало свободного времени.", "Bizda juda oz bo'sh vaqt qoldi.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Надежда", "[надéжда]", "Umid, ishonch", "Nadejda / Kiyim (Odejda)",
+                "Yangi oppoq bayramona kiyim (odejda) kiyib, imtihondan a'lo o'tishga katta umid bog'ladi.",
+                "У нас есть твёрдая надежда на успех проекта.", "Bizda loyihaning muvaffaqiyatiga qat'iy umid bor.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Счастье", "[счáстье]", "Baxt, saodat", "Schast / Qism (chast)",
+                "Oila davrasida o'tkazilgan har bir shirin lahza — inson baxtining eng muhim qismidir.",
+                "Семья и здоровье — это настоящее человеческое счастье.", "Oila va salomatlik — bu insonning haqiqiy baxtidir.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Путешествие", "[путешéствие]", "Sayohat, safar", "Put (Yo'l) + Shestvie (Qadam)",
+                "Katta yo'lga (put) qadam qo'yib, tog'lar va dengizlar bo'ylab unutilmas sayohat qildik.",
+                "Путешествие в Самарканд оставило незабываемые впечатления.", "Samarqandga sayohat unutilmas taassurotlar qoldirdi.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Внимание", "[внимáние]", "Diqqat, e'tibor", "Vnimat / Tinglamoq",
+                "O'qituvchining so'zlariga butun diqqat va e'tibor bilan quloq tutgan a'lochi o'quvchi.",
+                "Обратите особое внимание на эти правила.", "Ushbu qoidalarga alohida diqqat qarating.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Правда", "[прáвда]", "Haqiqat, rost gap", "Pravo (Huquq, adolat)",
+                "Har bir inson adolatli huquqqa (pravo) ega va haqiqat baribir g'alaba qozonadi.",
+                "Всегда говори чистую правду, даже если это трудно.", "Doimo toza haqiqatni gapiring, hatto bu qiyin bo'lsa ham.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Спокойствие", "[спокóйствие]", "Xotirjamlik, osoyishtalik", "Spokoy / Tinch suv",
+                "Tog' daryosi bo'yida o'tirib, qalbida cheksiz xotirjamlik va sokinlikni his qildi.",
+                "Сохраняйте спокойствие в любых сложных ситуациях.", "Har qanday murakkab vaziyatda ham xotirjamlikni saqlang.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Успех", "[успéх]", "Muvaffaqiyat, yutuq", "Uspet (Ulgurmoq)",
+                "Barcha darslarini o'z vaqtida bajarishga ulgurgan (uspet) tirishqoq talaba katta muvaffaqiyatga erishdi.",
+                "Упорный труд непременно приведёт вас к успеху.", "Tirishqoq mehnat sizni albatta muvaffaqiyatga olib keladi.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Завтра", "[зáвтра]", "Ertaga", "Zavtrak (Nonushta)",
+                "Ertaga ertalab birgalikda mazali nonushta (zavtrak) qilib, yangi muzeyga boramiz.",
+                "Завтра мы начнём совершенно новый урок.", "Ertaga biz mutlaqo yangi darsni boshlaymiz.", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Здравствуйте", "[здрáвствуйте]", "Assalomu alaykum, salom", "Zdorovie (Salomatlik)",
+                "Keksalarga mustahkam salomatlik (zdorovie) tilab: 'Zdravstvuyte — Assalomu alaykum!' deb ta'zim qildi.",
+                "Здравствуйте, дорогие друзья и коллеги!", "Assalomu alaykum, qadrli do'stlar va hamkasblar!", WordLevel.BEGINNER, TargetLanguage.RUSSIAN));
+
+        // =========================================================================
+        // 🟡 O'RTA DARAJA (INTERMEDIATE: B1 - B2) — RUSCHA
+        // =========================================================================
+        words.add(new Word("Препятствие", "[препÿтствие]", "To'siq, g'ov, to'g'anoq", "Pyat / To'xtab qolmoq",
+                "Yo'lda katta tosh to'siq bo'lib chiqdi, ammo qat'iyatli sayyoh uni aylanib o'tdi.",
+                "Никакое препятствие не остановит нашу команду.", "Hech qanday to'siq jamoamizni to'xtata olmaydi.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Вдохновение", "[вдохновéние]", "Ilhom, zavq", "Vdox (Nafas olmoq)",
+                "Tog' cho'qqisida chuqur nafas (vdox) olgan musavvir yangi asari uchun cheksiz ilhom topdi.",
+                "Природа дарит поэтам неиссякаемое вдохновение.", "Tabiat shoirlarga tuganmas ilhom baxsh etadi.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Решительность", "[решúтельность]", "Qat'iyat, dadillik", "Reshit (Hal qilmoq)",
+                "Murakkab muammoni tezda hal qilish (reshit) uchun unga mustahkam qat'iyat va dadillik kerak bo'ldi.",
+                "Его решительность помогла спасти весь проект.", "Uning qat'iyati butun loyihani qutqarishga yordam berdi.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Исследование", "[исследовáние]", "Tadqiqot, izlanish", "Sled (Iz)",
+                "Olimlar o'tmish izidan (sled) borib, qadimiy sivilizatsiya bo'yicha chuqur ilmiy tadqiqot o'tkazdilar.",
+                "Научное исследование подтвердило точность гипотезы.", "Ilmiy tadqiqot gipotezaning to'g'riligini tasdiqladi.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Любопытство", "[любопӹтство]", "Qiziquvchanlik, bilishga intilish", "Lyubit + Pit (Sevmoq)",
+                "Yangi bilimlarni bilishga o'ta intiluvchan bolaning qiziquvchanligi barchani hayratga soldi.",
+                "Детское любопытство двигает прогресс вперёд.", "Bolalarning qiziquvchanligi taraqqiyotni oldinga suradi.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Достижение", "[достижéние]", "Yutuq, natija, marra", "Dostich (Yetishmoq)",
+                "Yillik mashaqqatli mehnat evaziga u o'zining eng katta ilmiy yutug'iga erishdi.",
+                "Это грандиозное достижение для нашей лаборатории.", "Bu laboratoriyamiz uchun ulkan yutuqdir.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Уважение", "[уважéние]", "Hurmat, ehtirom", "Vajniy (Muhim)",
+                "O'zgalarning fikrini muhim (vajniy) deb bilgan inson jamoada katta hurmat qozonadi.",
+                "Взаимное уважение — основа крепкой семьи.", "O'zaro hurmat — mustahkam oilaning poydevoridir.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Сомнение", "[сомнéние]", "Shubha, gumon", "Mnenie (Fikr ikkilanishi)",
+                "Fikrlar (mnenie) to'qnashib, qalbida kichik shubha va ikkilanish paydo bo'ldi.",
+                "У меня нет никаких сомнений в его честности.", "Menda uning halolligiga hech qanday shubha yo'q.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Ответственность", "[отвéтственность]", "Mas'uliyat, javobgarlik", "Otvet (Javob bermoq)",
+                "Har bir so'z va harakatiga to'liq javob (otvet) bera oladigan inson yuksak mas'uliyatga ega.",
+                "Лидер несёт персональную ответственность за результат.", "Yetakchi natija uchun shaxsiy mas'uliyatni o'z zimmasiga oladi.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Доверие", "[довéрие]", "Ishonch, e'tiqod", "Vera (Ishonch)",
+                "Hamkorlar o'rtasidagi samimiy ishonch (vera) muvaffaqiyatli biznesning kafolatidir.",
+                "Завоевать доверие людей требует много времени.", "Odamlarning ishonchini qozonish ko'p vaqt talab qiladi.", WordLevel.INTERMEDIATE, TargetLanguage.RUSSIAN));
+
+        // =========================================================================
+        // 🔴 YUQORI DARAJA (ADVANCED: C1 - C2) — RUSCHA
+        // =========================================================================
+        words.add(new Word("Безупречный", "[безупрéчный]", "Nuqsonsiz, benuqson, bekamu ko'st", "Bez upryoka (Minnatsiz)",
+                "Zargar yasagan olmos toj shu qadar benuqson ediki, unga hech kim minnat yoki ayb qo'yolmasdi.",
+                "Его безупречная репутация известна во всём мире.", "Uning benuqson obro'si butun dunyoga ma'lum.", WordLevel.ADVANCED, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Красноречивый", "[красноречúвый]", "Fasohatli, notiq, so'zamol", "Krasivaya rech (Go'zal nutq)",
+                "Go'zal va ta'sirli nutq (rech) so'zlab, zaldagi barcha tinglovchilarni rom etgan so'zamol notiq.",
+                "Дипломат выступил с красноречивым заявлением.", "Diplomat fasohatli va ta'sirchan bayonot bilan chiqdi.", WordLevel.ADVANCED, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Кропотливый", "[кропотлúвый]", "Mashaqqatli, qunt talab qiladigan, sinchkov", "Kropotat / Kichik detallar",
+                "Qadimiy qo'lyozmalarni tiklash oylar davomida o'ta sinchkov va mashaqqatli mehnatni talab qildi.",
+                "Это результат многолетнего кропотливого труда.", "Bu ko'p yillik mashaqqatli va sinchkov mehnatning samarasidir.", WordLevel.ADVANCED, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Незыблемый", "[незӹблемый]", "Qat'iy, o'zgarmas, mustahkam, yiqilmas", "Zыbkiy emas (Qimirlamas)",
+                "Ko'p asrlik adolat tamoyillari davlatning eng mustahkam va o'zgarmas poydevori bo'lib qoladi.",
+                "Справедливость — незыблемая основа правового государства.", "Adolat — huquqiy davlatning o'zgarmas poydevoridir.", WordLevel.ADVANCED, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Скоротечный", "[скоротéчный]", "Tez o'tuvchi, ko'z ochib yumguncha o'tadigan", "Skoro (Tez) + Tech (Oqmoq)",
+                "Tog' daryosidek tez oqib (tech) o'tib ketadigan go'zal bahor fasli.",
+                "Жизнь полна прекрасных, но скоротечных мгновений.", "Hayot go'zal, ammo tez o'tuvchi lahzalarga to'la.", WordLevel.ADVANCED, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Утончённый", "[утончённый]", "Nafis, nozik didli, saralangan", "Tonkiy (Yupqa, nozik)",
+                "Har bir detalida noziklik va nafislik aks etgan saroy me'morchiligi.",
+                "Она обладает удивительно утончённым вкусом.", "U ajoyib darajada nafis va nozik didga ega.", WordLevel.ADVANCED, TargetLanguage.RUSSIAN));
+
+        words.add(new Word("Непреодолимый", "[непреодолúмый]", "Yengib bo'lmas, yengilmas", "Preodolevat (Yengmoq)",
+                "Jasur alpinistlar eng murakkab va yengib bo'lmas ko'ringan qoyani ham zabt etishdi.",
+                "Нет непреодолимых преград для тех, кто верит в цель.", "Maqsadiga ishonganlar uchun yengib bo'lmas to'siqlar yo'q.", WordLevel.ADVANCED, TargetLanguage.RUSSIAN));
     }
 
     public List<Word> getAllWords() {
         return Collections.unmodifiableList(words);
+    }
+
+    public List<Word> getWordsByLanguage(TargetLanguage language) {
+        TargetLanguage lang = (language != null) ? language : TargetLanguage.ENGLISH;
+        return words.stream()
+                .filter(w -> w.getLanguage() == lang)
+                .collect(Collectors.toList());
     }
 
     public int getTotalDays() {
@@ -277,17 +347,32 @@ public class WordRepository {
     }
 
     public List<Word> getWordsByLevel(WordLevel level) {
-        if (level == null) return getAllWords();
+        return getWordsByLevel(level, TargetLanguage.ENGLISH);
+    }
+
+    public List<Word> getWordsByLevel(WordLevel level, TargetLanguage language) {
+        TargetLanguage lang = (language != null) ? language : TargetLanguage.ENGLISH;
+        if (level == null) {
+            return getWordsByLanguage(lang);
+        }
         return words.stream()
-                .filter(w -> w.getLevel() == level)
+                .filter(w -> w.getLanguage() == lang && w.getLevel() == level)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Foydalanuvchining tanlagan darajasiga mos 20 ta so'zni qaytaradi
+     * Foydalanuvchining tanlagan darajasi va tiliga mos 20 ta so'zni qaytaradi
      */
     public List<Word> getWordsForDayAndLevel(int dayIndex, WordLevel level) {
-        List<Word> levelWords = getWordsByLevel(level);
+        return getWordsForDayAndLevel(dayIndex, level, TargetLanguage.ENGLISH);
+    }
+
+    public List<Word> getWordsForDayAndLevel(int dayIndex, WordLevel level, TargetLanguage language) {
+        TargetLanguage lang = (language != null) ? language : TargetLanguage.ENGLISH;
+        List<Word> levelWords = getWordsByLevel(level, lang);
+        if (levelWords.isEmpty()) {
+            levelWords = getWordsByLanguage(lang);
+        }
         if (levelWords.isEmpty()) {
             levelWords = getAllWords();
         }
@@ -307,13 +392,24 @@ public class WordRepository {
     }
 
     public Optional<Word> getRandomWord() {
-        if (words.isEmpty()) return Optional.empty();
-        return Optional.of(words.get(random.nextInt(words.size())));
+        return getRandomWord(TargetLanguage.ENGLISH);
+    }
+
+    public Optional<Word> getRandomWord(TargetLanguage language) {
+        List<Word> langWords = getWordsByLanguage(language);
+        if (langWords.isEmpty()) return Optional.empty();
+        return Optional.of(langWords.get(random.nextInt(langWords.size())));
     }
 
     public Optional<Word> getRandomWordByLevel(WordLevel level) {
-        List<Word> filtered = getWordsByLevel(level);
-        if (filtered.isEmpty()) return Optional.empty();
+        return getRandomWordByLevel(level, TargetLanguage.ENGLISH);
+    }
+
+    public Optional<Word> getRandomWordByLevel(WordLevel level, TargetLanguage language) {
+        List<Word> filtered = getWordsByLevel(level, language);
+        if (filtered.isEmpty()) {
+            return getRandomWord(language);
+        }
         return Optional.of(filtered.get(random.nextInt(filtered.size())));
     }
 
@@ -322,6 +418,20 @@ public class WordRepository {
         String normalized = query.trim().toLowerCase();
 
         return words.stream()
+                .filter(w -> w.getEnglishWord().toLowerCase().equals(normalized)
+                        || w.getEnglishWord().toLowerCase().contains(normalized)
+                        || w.getUzbekMeaning().toLowerCase().contains(normalized)
+                        || w.getMnemonicHook().toLowerCase().contains(normalized))
+                .findFirst();
+    }
+
+    public Optional<Word> findByKeyword(String query, TargetLanguage language) {
+        if (query == null || query.trim().isEmpty()) return Optional.empty();
+        String normalized = query.trim().toLowerCase();
+        TargetLanguage lang = (language != null) ? language : TargetLanguage.ENGLISH;
+
+        return words.stream()
+                .filter(w -> w.getLanguage() == lang)
                 .filter(w -> w.getEnglishWord().toLowerCase().equals(normalized)
                         || w.getEnglishWord().toLowerCase().contains(normalized)
                         || w.getUzbekMeaning().toLowerCase().contains(normalized)

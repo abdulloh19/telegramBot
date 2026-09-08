@@ -1,6 +1,7 @@
 package com.mnemonic.service;
 
 import com.mnemonic.model.QuizQuestion;
+import com.mnemonic.model.TargetLanguage;
 import com.mnemonic.model.Word;
 import com.mnemonic.repository.WordRepository;
 
@@ -14,29 +15,35 @@ public class QuizService {
         this.repository = repository;
     }
 
-    /**
-     * Yangi viktorina savoli generatsiya qiladi
-     */
     public Optional<QuizQuestion> generateQuestion() {
-        Optional<Word> correctWordOpt = repository.getRandomWord();
+        return generateQuestion(TargetLanguage.ENGLISH);
+    }
+
+    /**
+     * Yangi viktorina savoli generatsiya qiladi (faol tilga qarab)
+     */
+    public Optional<QuizQuestion> generateQuestion(TargetLanguage language) {
+        TargetLanguage lang = (language != null) ? language : TargetLanguage.ENGLISH;
+        Optional<Word> correctWordOpt = repository.getRandomWord(lang);
         if (correctWordOpt.isEmpty()) {
             return Optional.empty();
         }
 
         Word correctWord = correctWordOpt.get();
-        List<Word> allWords = new ArrayList<>(repository.getAllWords());
+        List<Word> allWords = new ArrayList<>(repository.getWordsByLanguage(lang));
         allWords.remove(correctWord);
         Collections.shuffle(allWords);
 
-        // Savol turlari: 0 = So'z beriladi, tarjimasini topish; 1 = Mnemonika beriladi, so'zni topish
         boolean isMeaningQuestion = random.nextBoolean();
+        String langFlag = (lang == TargetLanguage.RUSSIAN) ? "🇷🇺" : "🇬🇧";
+        String langWordPrompt = (lang == TargetLanguage.RUSSIAN) ? "ruscha" : "inglizcha";
 
         String questionText;
         String correctAnswer;
         List<String> distractors = new ArrayList<>();
 
         if (isMeaningQuestion) {
-            questionText = "🎯 <b>Viktorina:</b> Quyidagi so'zning to'g'ri tarjimasini toping:\n\n" +
+            questionText = "🎯 <b>Viktorina (" + langFlag + "):</b> Quyidagi " + langWordPrompt + " so'zning to'g'ri tarjimasini toping:\n\n" +
                            "🔤 <b>" + correctWord.getEnglishWord().toUpperCase() + "</b> " + correctWord.getPronunciation();
             correctAnswer = correctWord.getUzbekMeaning();
 
@@ -44,7 +51,7 @@ public class QuizService {
                 distractors.add(allWords.get(i).getUzbekMeaning());
             }
         } else {
-            questionText = "🧠 <b>Viktorina:</b> Ushbu mnemonik obraz qaysi so'zga tegishli?\n\n" +
+            questionText = "🧠 <b>Viktorina (" + langFlag + "):</b> Ushbu mnemonik obraz qaysi " + langWordPrompt + " so'zga tegishli?\n\n" +
                            "💡 <i>\"" + correctWord.getMnemonicStory() + "\"</i>";
             correctAnswer = correctWord.getEnglishWord();
 

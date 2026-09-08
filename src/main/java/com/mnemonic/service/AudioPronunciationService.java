@@ -1,5 +1,7 @@
 package com.mnemonic.service;
 
+import com.mnemonic.model.DailyDialogue;
+import com.mnemonic.model.TargetLanguage;
 import com.mnemonic.model.Word;
 import org.telegram.telegrambots.meta.api.methods.send.SendVoice;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
@@ -13,7 +15,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Inglizcha so'z va iboralarning haqiqiy ovozli talaffuzini yuklab beruvchi va
+ * Ingliz va Ruscha so'z hamda iboralarning haqiqiy ovozli talaffuzini yuklab beruvchi va
  * Telegram orqali yuboruvchi audio servis.
  * Yuklangan audio fayllar data/audio_cache/ papkasida keshlanadi.
  */
@@ -28,16 +30,27 @@ public class AudioPronunciationService {
         }
     }
 
+    public File getOrDownloadAudio(String text) {
+        return getOrDownloadAudio(text, "en");
+    }
+
     /**
-     * So'z uchun MP3 faylni keshdan oladi yoki Google TTS orqali yuklab saqlaydi
+     * So'z yoki matn uchun MP3 faylni keshdan oladi yoki Google TTS orqali yuklab saqlaydi.
+     * langCode: "en" yoki "ru"
      */
-    public synchronized File getOrDownloadAudio(String text) {
+    public synchronized File getOrDownloadAudio(String text, String langCode) {
         if (text == null || text.trim().isEmpty()) {
             return null;
         }
 
-        String cleanName = text.trim().toLowerCase().replaceAll("[^a-z0-9_\\-]", "_");
-        File audioFile = new File(cacheDir, cleanName + ".mp3");
+        String safeLang = (langCode != null && langCode.toLowerCase().startsWith("ru")) ? "ru" : "en";
+        int hash = Math.abs(text.hashCode());
+        String sanitized = text.trim().toLowerCase().replaceAll("[^a-zA-Z0-9\\u0400-\\u04FF_\\-]", "_");
+        if (sanitized.length() > 30) {
+            sanitized = sanitized.substring(0, 30);
+        }
+        String fileName = safeLang + "_" + sanitized + "_" + hash + ".mp3";
+        File audioFile = new File(cacheDir, fileName);
 
         if (audioFile.exists() && audioFile.length() > 0) {
             return audioFile;
@@ -45,7 +58,7 @@ public class AudioPronunciationService {
 
         try {
             String encodedText = URLEncoder.encode(text.trim(), StandardCharsets.UTF_8);
-            String urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=" + encodedText;
+            String urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&tl=" + safeLang + "&client=tw-ob&q=" + encodedText;
 
             URL url = new URL(urlStr);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -66,7 +79,7 @@ public class AudioPronunciationService {
                 }
                 return audioFile;
             } else {
-                System.err.println("⚠️ TTS audio yuklashda xatolik (" + responseCode + "): " + text);
+                System.err.println("⚠️ TTS audio yuklashda xatolik (" + responseCode + "): " + text + " [" + safeLang + "]");
             }
         } catch (Exception e) {
             System.err.println("⚠️ TTS yuklashda xatolik yuz berdi: " + e.getMessage());
@@ -79,15 +92,17 @@ public class AudioPronunciationService {
      * Berilgan Word modeli uchun Telegram SendVoice obyektini tayyorlaydi
      */
     public SendVoice createVoiceMessage(long chatId, Word word) {
-        File audioFile = getOrDownloadAudio(word.getEnglishWord());
+        String langCode = word.getLanguage() != null ? word.getLanguage().getCode() : "en";
+        File audioFile = getOrDownloadAudio(word.getEnglishWord(), langCode);
         if (audioFile == null || !audioFile.exists()) {
             return null;
         }
 
+        String flag = (word.getLanguage() == TargetLanguage.RUSSIAN) ? "🇷🇺" : "🇬🇧";
         SendVoice sendVoice = new SendVoice();
         sendVoice.setChatId(String.valueOf(chatId));
         sendVoice.setVoice(new InputFile(audioFile));
-        sendVoice.setCaption("🔊 <b>Talaffuzi:</b> <code>" + word.getEnglishWord() + "</code> " +
+        sendVoice.setCaption("🔊 <b>Talaffuzi (" + flag + "):</b> <code>" + word.getEnglishWord() + "</code> " +
                              word.getPronunciation() + "\n" +
                              "🇺🇿 <b>Ma'nosi:</b> <b>" + word.getUzbekMeaning() + "</b>\n" +
                              "💡 <i>Fonetik ilmoq: " + word.getMnemonicHook() + "</i>");
@@ -99,7 +114,11 @@ public class AudioPronunciationService {
      * Ixtiyoriy so'z yoki matn uchun Telegram SendVoice obyektini tayyorlaydi
      */
     public SendVoice createVoiceMessage(long chatId, String wordText, String caption) {
-        File audioFile = getOrDownloadAudio(wordText);
+        return createVoiceMessage(chatId, wordText, caption, "en");
+    }
+
+    public SendVoice createVoiceMessage(long chatId, String wordText, String caption, String langCode) {
+        File audioFile = getOrDownloadAudio(wordText, langCode);
         if (audioFile == null || !audioFile.exists()) {
             return null;
         }
@@ -115,16 +134,18 @@ public class AudioPronunciationService {
     /**
      * Butun dialog uchun to'liq ovozli xabar (SendVoice) tayyorlaydi
      */
-    public SendVoice createDialogueVoiceMessage(long chatId, com.mnemonic.model.DailyDialogue dialogue) {
-        File audioFile = getOrDownloadAudio(dialogue.getSpeechScript());
+    public SendVoice createDialogueVoiceMessage(long chatId, DailyDialogue dialogue) {
+        String langCode = dialogue.getLanguage() != null ? dialogue.getLanguage().getCode() : "en";
+        File audioFile = getOrDownloadAudio(dialogue.getSpeechScript(), langCode);
         if (audioFile == null || !audioFile.exists()) {
             return null;
         }
 
+        String flag = (dialogue.getLanguage() == TargetLanguage.RUSSIAN) ? "🇷🇺" : "🇬🇧";
         SendVoice sendVoice = new SendVoice();
         sendVoice.setChatId(String.valueOf(chatId));
         sendVoice.setVoice(new InputFile(audioFile));
-        sendVoice.setCaption("🎧 <b>Audio Dialog:</b> " + dialogue.getTitle() + "\n" +
+        sendVoice.setCaption("🎧 <b>Audio Dialog (" + flag + "):</b> " + dialogue.getTitle() + "\n" +
                              "📊 <b>Daraja:</b> " + dialogue.getLevel().getDisplayName() + "\n" +
                              "💡 <i>Bugungi 20 ta so'z real suhbatda qo'llangan. Eshitib, birga takrorlang!</i>");
         sendVoice.setParseMode("HTML");

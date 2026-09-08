@@ -7,7 +7,8 @@ import java.time.LocalDate;
 public class UserProfile {
     private long chatId;
     private String firstName;
-    private WordLevel selectedLevel; // null bo'lsa kirganda so'raladi
+    private TargetLanguage targetLanguage = null; // null bo'lsa kirganda dastlab til tanlanadi
+    private WordLevel selectedLevel; // null bo'lsa til tanlangach so'raladi
 
     private int currentStreak = 0;
     private int maxStreak = 0;
@@ -34,7 +35,8 @@ public class UserProfile {
     public UserProfile(long chatId, String firstName) {
         this.chatId = chatId;
         this.firstName = firstName;
-        this.selectedLevel = null; // Ilk kirganida darajasini tanlaydi
+        this.targetLanguage = null; // Kirishda til tanlaydi
+        this.selectedLevel = null; // Til tanlangach daraja tanlaydi
         this.currentStreak = 0;
         this.maxStreak = 0;
         this.currentDayIndex = 1;
@@ -57,6 +59,14 @@ public class UserProfile {
 
     public void setFirstName(String firstName) {
         this.firstName = firstName;
+    }
+
+    public TargetLanguage getTargetLanguage() {
+        return targetLanguage;
+    }
+
+    public void setTargetLanguage(TargetLanguage targetLanguage) {
+        this.targetLanguage = targetLanguage;
     }
 
     public WordLevel getSelectedLevel() {

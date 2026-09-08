@@ -1,5 +1,6 @@
 package com.mnemonic.service;
 
+import com.mnemonic.model.TargetLanguage;
 import com.mnemonic.model.UserProfile;
 import com.mnemonic.model.Word;
 import com.mnemonic.repository.UserRepository;
@@ -19,7 +20,11 @@ public class DailyLessonService {
     }
 
     public List<Word> getTodayWords(UserProfile profile) {
-        return wordRepository.getWordsForDayAndLevel(profile.getCurrentDayIndex(), profile.getSelectedLevel());
+        return wordRepository.getWordsForDayAndLevel(
+                profile.getCurrentDayIndex(),
+                profile.getSelectedLevel(),
+                profile.getTargetLanguage()
+        );
     }
 
     public Word getCurrentWord(UserProfile profile) {
@@ -37,9 +42,10 @@ public class DailyLessonService {
         int total = todayWords.size();
         Word word = todayWords.get(currentIndex);
         String levelName = profile.getSelectedLevel() != null ? profile.getSelectedLevel().getDisplayName() : "Umumiy";
+        String flag = (profile.getTargetLanguage() == TargetLanguage.RUSSIAN) ? "🇷🇺 Rus tili" : "🇬🇧 Ingliz tili";
 
         StringBuilder sb = new StringBuilder();
-        sb.append("📅 <b>KUNLIK DARS: ").append(profile.getCurrentDayIndex()).append("-KUN</b> (").append(levelName).append(")\n");
+        sb.append("📅 <b>KUNLIK DARS: ").append(profile.getCurrentDayIndex()).append("-KUN</b> (").append(flag).append(" — ").append(levelName).append(")\n");
         sb.append("📊 <b>Jarayon:</b> ").append(currentIndex + 1).append(" / ").append(total).append(" ta so'z\n");
         sb.append(generateProgressBar(currentIndex + 1, total)).append("\n\n");
         sb.append(word.toFormattedCard());

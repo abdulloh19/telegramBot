@@ -1,6 +1,7 @@
 package com.mnemonic.service;
 
 import com.mnemonic.model.Exercise;
+import com.mnemonic.model.TargetLanguage;
 import com.mnemonic.model.UserProfile;
 import com.mnemonic.model.Word;
 import com.mnemonic.repository.UserRepository;
@@ -23,10 +24,14 @@ public class ExerciseService {
     }
 
     /**
-     * Foydalanuvchining tanlagan darajasiga mos bugungi 20 ta so'zi asosida 5 ta mustahkamlovchi mashq generatsiya qiladi
+     * Foydalanuvchining tanlagan darajasi va tiliga mos bugungi 20 ta so'zi asosida 5 ta mustahkamlovchi mashq generatsiya qiladi
      */
     public List<Exercise> generateDailyExerciseSet(UserProfile profile) {
-        List<Word> dayWords = new ArrayList<>(wordRepository.getWordsForDayAndLevel(profile.getCurrentDayIndex(), profile.getSelectedLevel()));
+        TargetLanguage lang = (profile.getTargetLanguage() != null) ? profile.getTargetLanguage() : TargetLanguage.ENGLISH;
+        List<Word> dayWords = new ArrayList<>(wordRepository.getWordsForDayAndLevel(profile.getCurrentDayIndex(), profile.getSelectedLevel(), lang));
+        if (dayWords.isEmpty()) {
+            dayWords = new ArrayList<>(wordRepository.getWordsByLanguage(lang));
+        }
         if (dayWords.isEmpty()) {
             dayWords = new ArrayList<>(wordRepository.getAllWords());
         }
@@ -34,6 +39,7 @@ public class ExerciseService {
 
         List<Exercise> exercises = new ArrayList<>();
         int count = Math.min(EXERCISES_PER_SESSION, dayWords.size());
+        String langName = (lang == TargetLanguage.RUSSIAN) ? "ruscha" : "inglizcha";
 
         for (int i = 0; i < count; i++) {
             Word targetWord = dayWords.get(i);
@@ -56,7 +62,7 @@ public class ExerciseService {
                     options.add(distractors.get(d).getUzbekMeaning());
                 }
             } else if (type == 1) {
-                prompt = "🧠 <b>Mashq " + (i + 1) + "/" + count + ":</b> Ushbu mnemonik obraz qaysi so'zga tegishli?\n\n" +
+                prompt = "🧠 <b>Mashq " + (i + 1) + "/" + count + ":</b> Ushbu mnemonik obraz qaysi " + langName + " so'zga tegishli?\n\n" +
                          "🎬 <i>\"" + targetWord.getMnemonicStory() + "\"</i>";
                 correctAnswer = targetWord.getEnglishWord();
 
@@ -64,7 +70,7 @@ public class ExerciseService {
                     options.add(distractors.get(d).getEnglishWord());
                 }
             } else {
-                prompt = "🇺🇿 <b>Mashq " + (i + 1) + "/" + count + ":</b> Quyidagi ma'noga mos inglizcha so'zni toping:\n\n" +
+                prompt = "🇺🇿 <b>Mashq " + (i + 1) + "/" + count + ":</b> Quyidagi ma'noga mos " + langName + " so'zni toping:\n\n" +
                          "🎯 <b>\"" + targetWord.getUzbekMeaning() + "\"</b>";
                 correctAnswer = targetWord.getEnglishWord();
 

@@ -78,13 +78,13 @@ public class ReminderSchedulerService {
 
     private void sendReminderMessage(UserProfile profile) {
         // Bugungi darsdagi yoki tanlangan darajadagi e'tiborga molik "Kun So'zi"
-        List<Word> dayWords = wordRepository.getWordsForDayAndLevel(profile.getCurrentDayIndex(), profile.getSelectedLevel());
+        List<Word> dayWords = wordRepository.getWordsForDayAndLevel(profile.getCurrentDayIndex(), profile.getSelectedLevel(), profile.getTargetLanguage());
         Word featuredWord = null;
         if (!dayWords.isEmpty()) {
             int featuredIdx = profile.getCurrentDayIndex() % dayWords.size();
             featuredWord = dayWords.get(featuredIdx);
         } else {
-            featuredWord = wordRepository.getRandomWord().orElse(null);
+            featuredWord = wordRepository.getRandomWord(profile.getTargetLanguage()).orElse(null);
         }
 
         String creativeText = creativeContentService.buildCreativeReminder(profile, featuredWord);
