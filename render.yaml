@@ -1,0 +1,27 @@
+services:
+  # ─────────────────────────────────────────────────────
+  # 1. Mnemonic WebApp (Next.js - Telegram Mini App)
+  # ─────────────────────────────────────────────────────
+  - type: web
+    name: mnemonic-webapp
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    healthCheckPath: /
+
+  # ─────────────────────────────────────────────────────
+  # 2. Telegram Dev Bridge Bot (Python)
+  #    (allaqachon render.yaml bor - bu faqat eslatma)
+  # ─────────────────────────────────────────────────────
+  # telegram-video-downloader:
+  #   type: web
+  #   env: python
+  #   buildCommand: pip install -r requirements.txt
+  #   startCommand: python bot.py
