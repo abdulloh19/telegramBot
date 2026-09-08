@@ -1,20 +1,21 @@
 services:
   # ─────────────────────────────────────────────────────
-  # 1. Mnemonic WebApp (Next.js - Telegram Mini App)
+  # Mnemonic WebApp (Next.js - Telegram Mini App)
+  # GitHub: abdulloh19/telegramBot  branch: webapp
   # ─────────────────────────────────────────────────────
   - type: web
     name: mnemonic-webapp
     env: node
     region: frankfurt
     plan: free
+    branch: webapp
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
     healthCheckPath: /
+
 
   # ─────────────────────────────────────────────────────
   # 2. Telegram Dev Bridge Bot (Python)
