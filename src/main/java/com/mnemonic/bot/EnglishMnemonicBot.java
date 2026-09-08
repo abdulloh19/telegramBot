@@ -25,12 +25,17 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.api.methods.menubutton.SetChatMenuButton;
+import org.telegram.telegrambots.meta.api.objects.menubutton.MenuButtonWebApp;
+import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class EnglishMnemonicBot extends TelegramLongPollingBot {
+
+    public static final String DEFAULT_WEB_APP_URL = "https://loose-drinks-walk.loca.lt";
 
     private final String botUsername;
     private final String botToken;
@@ -128,6 +133,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             case "/start":
             case "/menu":
             case "🏠 Asosiy Menyu":
+                setupUserMenuButton(chatId);
                 if (profile.getTargetLanguage() == null) {
                     sendInitialLanguagePrompt(chatId, profile);
                 } else if (profile.getSelectedLevel() == null) {
@@ -1415,6 +1421,10 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         row6.add(new KeyboardButton("💡 Mnemonika nima?"));
 
         KeyboardRow row7 = new KeyboardRow();
+        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : DEFAULT_WEB_APP_URL;
+        KeyboardButton superBtn = new KeyboardButton("🚀 Super ilova");
+        superBtn.setWebApp(new WebAppInfo(webUrl));
+        row7.add(superBtn);
         row7.add(new KeyboardButton("📱 Web Ilova (Next.js Mini App)"));
 
         keyboard.add(row1);
@@ -1427,6 +1437,25 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         keyboardMarkup.setKeyboard(keyboard);
         return keyboardMarkup;
+    }
+
+    public void setupUserMenuButton(long chatId) {
+        try {
+            String url = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : DEFAULT_WEB_APP_URL;
+            MenuButtonWebApp menuButton = MenuButtonWebApp.builder()
+                    .text("Super ilova")
+                    .webAppInfo(new WebAppInfo(url))
+                    .build();
+
+            SetChatMenuButton setMenuButton = new SetChatMenuButton();
+            if (chatId != 0) {
+                setMenuButton.setChatId(chatId);
+            }
+            setMenuButton.setMenuButton(menuButton);
+            execute(setMenuButton);
+        } catch (Exception e) {
+            // ignore if error
+        }
     }
 
     public void sendMessage(long chatId, String text) {
