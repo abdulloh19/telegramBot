@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
-    public static final String DEFAULT_WEB_APP_URL = "https://loose-drinks-walk.loca.lt";
+    public static final String DEFAULT_WEB_APP_URL = "https://pubs-cultures-salvador-specialties.trycloudflare.com";
 
     private final String botUsername;
     private final String botToken;
