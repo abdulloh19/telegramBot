@@ -34,9 +34,17 @@ public class UserRepository {
         loadFromDisk();
         UserProfile profile = userProfiles.get(chatId);
         if (profile == null) {
-            profile = new UserProfile(chatId, firstName);
+            // INSERT OR IGNORE: Faqat birinchi marta bazada yo'q bo'lsa yangi yaratiladi
+            profile = new UserProfile(chatId, firstName != null ? firstName : "Foydalanuvchi");
             userProfiles.put(chatId, profile);
             saveToDisk();
+            System.out.println("👤 [YANGI FOYDALANUVCHI BAZAGA YOZILDI] ID: " + chatId + " (" + firstName + ")");
+        } else {
+            // UPSERT: Agar mavjud bo'lsa, mavjud progress (so'zlar, daraja, streak) o'chmaydi!
+            if (firstName != null && !firstName.isBlank() && ("Foydalanuvchi".equals(profile.getFirstName()) || profile.getFirstName() == null)) {
+                profile.setFirstName(firstName);
+                saveToDisk();
+            }
         }
         return profile;
     }
@@ -47,6 +55,7 @@ public class UserRepository {
     }
 
     public synchronized void save(UserProfile profile) {
+        if (profile == null) return;
         loadFromDisk();
         userProfiles.put(profile.getChatId(), profile);
         saveToDisk();
@@ -91,6 +100,12 @@ public class UserRepository {
     private synchronized void saveToDisk() {
         try {
             objectMapper.writeValue(storageFile, userProfiles);
+            try {
+                File webappUsers = new File("../mnemonic-webapp/data/users.json");
+                if (webappUsers.getParentFile().exists()) {
+                    objectMapper.writeValue(webappUsers, userProfiles);
+                }
+            } catch (Exception ignored) {}
         } catch (IOException e) {
             System.err.println("❌ Foydalanuvchilar ma'lumotlarini saqlashda xatolik: " + e.getMessage());
         }

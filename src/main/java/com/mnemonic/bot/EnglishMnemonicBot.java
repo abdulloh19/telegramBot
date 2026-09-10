@@ -1439,28 +1439,42 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         rows.add(r1);
         markup.setKeyboard(rows);
 
-        List<UserProfile> allUsers = userRepository.getAllProfiles();
+        List<UserProfile> allProfiles = userRepository.getAllProfiles();
+        Set<Long> allUserIds = new LinkedHashSet<>();
+        for (UserProfile u : allProfiles) {
+            allUserIds.add(u.getChatId());
+        }
+        // Zaxira va admin ID lar
+        allUserIds.add(ADMIN_CHAT_ID);
+        allUserIds.add(6767933010L);
+        allUserIds.add(5049524803L);
+
         int sent = 0;
         int failed = 0;
 
-        for (UserProfile u : allUsers) {
+        for (Long uid : allUserIds) {
             try {
                 SendMessage sm = new SendMessage();
-                sm.setChatId(String.valueOf(u.getChatId()));
+                sm.setChatId(String.valueOf(uid));
                 sm.setText(broadcastMsg);
                 sm.setParseMode("HTML");
                 sm.setReplyMarkup(markup);
                 execute(sm);
                 sent++;
-                Thread.sleep(40); // 25 msg/sec
+                Thread.sleep(50); // 20 msg/sec xavfsiz FloodWait cheklovi
+            } catch (TelegramApiException e) {
+                failed++;
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ignored) {}
             } catch (Exception e) {
                 failed++;
             }
         }
 
         String report = "✅ <b>Ommaviy xabarnoma yakunlandi!</b>\n\n" +
-                "• Jami: " + allUsers.size() + " ta\n" +
-                "• Yetkazildi: " + sent + " ta\n" +
+                "• Jami qamrab olingan: " + allUserIds.size() + " ta\n" +
+                "• Muvaffaqiyatli yetkazildi: " + sent + " ta\n" +
                 "• Xato/Bloklagan: " + failed + " ta";
         sendMessage(adminChatId, report);
     }
