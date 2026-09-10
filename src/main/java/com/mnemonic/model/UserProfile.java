@@ -151,10 +151,10 @@ public class UserProfile {
     }
 
     public int getTotalWordsLearned() {
-        if (totalWordsLearned > 0) {
-            return totalWordsLearned;
+        if (totalWordsLearnedRu > 0 || totalWordsLearnedEn > 0) {
+            return totalWordsLearnedRu + totalWordsLearnedEn;
         }
-        return getTotalWordsLearnedRu() + getTotalWordsLearnedEn();
+        return totalWordsLearned;
     }
 
     public void setTotalWordsLearned(int totalWordsLearned) {
@@ -162,9 +162,6 @@ public class UserProfile {
     }
 
     public int getTotalWordsLearnedRu() {
-        if (totalWordsLearnedRu == 0 && targetLanguage == TargetLanguage.RUSSIAN && totalWordsLearned > 0) {
-            return totalWordsLearned;
-        }
         return totalWordsLearnedRu;
     }
 
@@ -173,9 +170,6 @@ public class UserProfile {
     }
 
     public int getTotalWordsLearnedEn() {
-        if (totalWordsLearnedEn == 0 && targetLanguage == TargetLanguage.ENGLISH && totalWordsLearned > 0) {
-            return totalWordsLearned;
-        }
         return totalWordsLearnedEn;
     }
 
