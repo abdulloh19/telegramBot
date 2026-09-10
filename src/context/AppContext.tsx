@@ -95,7 +95,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const parsed = JSON.parse(savedCompleted);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setCompletedWordIds(new Set(parsed));
+            const validIds = parsed.filter((id: string) => MNEMONIC_WORDS.some(w => w.id === id));
+            if (validIds.length > 0) {
+              setCompletedWordIds(new Set(validIds));
+            } else {
+              setCompletedWordIds(new Set(DEFAULT_COMPLETED_WORD_IDS));
+            }
           } else {
             setCompletedWordIds(new Set(DEFAULT_COMPLETED_WORD_IDS));
           }
@@ -263,6 +268,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return MNEMONIC_WORDS.filter(w => w.language === 'en' && completedWordIds.has(w.id));
   }, [completedWordIds]);
 
+  const dynamicStats = useMemo<UserStats>(() => ({
+    ...stats,
+    wordsLearnedCount: targetLanguage === 'ru' ? completedWordsRu.length : completedWordsEn.length,
+  }), [stats, targetLanguage, completedWordsRu.length, completedWordsEn.length]);
+
   const markWordCompleted = (wordId: string) => {
     setCompletedWordIds(prev => {
       const next = new Set(prev);
@@ -401,7 +411,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentWordIndex,
         setCurrentWordIndex,
         currentWord,
-        stats,
+        stats: dynamicStats,
         completedWordIds,
         completedWordsRu,
         completedWordsEn,
