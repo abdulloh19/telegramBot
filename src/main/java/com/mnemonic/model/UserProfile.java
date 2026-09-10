@@ -21,9 +21,9 @@ public class UserProfile {
     private boolean todayLessonCompleted = false;
     private boolean todayExerciseCompleted = false;
 
-    private int totalWordsLearned = 25;
-    private int totalWordsLearnedRu = 15;
-    private int totalWordsLearnedEn = 10;
+    private int totalWordsLearned = 0;
+    private int totalWordsLearnedRu = 0;
+    private int totalWordsLearnedEn = 0;
     private int totalExercisesCompleted = 0;
     private int totalQuizCorrect = 0;
     private int totalQuizCount = 0;
@@ -162,7 +162,10 @@ public class UserProfile {
     }
 
     public int getTotalWordsLearnedRu() {
-        return totalWordsLearnedRu > 0 ? totalWordsLearnedRu : 15;
+        if (totalWordsLearnedRu == 0 && targetLanguage == TargetLanguage.RUSSIAN && totalWordsLearned > 0) {
+            return totalWordsLearned;
+        }
+        return totalWordsLearnedRu;
     }
 
     public void setTotalWordsLearnedRu(int totalWordsLearnedRu) {
@@ -170,7 +173,10 @@ public class UserProfile {
     }
 
     public int getTotalWordsLearnedEn() {
-        return totalWordsLearnedEn > 0 ? totalWordsLearnedEn : 10;
+        if (totalWordsLearnedEn == 0 && targetLanguage == TargetLanguage.ENGLISH && totalWordsLearned > 0) {
+            return totalWordsLearned;
+        }
+        return totalWordsLearnedEn;
     }
 
     public void setTotalWordsLearnedEn(int totalWordsLearnedEn) {

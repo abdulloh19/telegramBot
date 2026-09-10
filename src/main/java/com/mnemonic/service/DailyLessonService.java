@@ -71,6 +71,11 @@ public class DailyLessonService {
     public StreakService.StreakResult completeTodayLesson(UserProfile profile) {
         profile.setTodayLessonCompleted(true);
         profile.setTotalWordsLearned(profile.getTotalWordsLearned() + WordRepository.WORDS_PER_DAY);
+        if (profile.getTargetLanguage() == com.mnemonic.model.TargetLanguage.RUSSIAN) {
+            profile.setTotalWordsLearnedRu(profile.getTotalWordsLearnedRu() + WordRepository.WORDS_PER_DAY);
+        } else {
+            profile.setTotalWordsLearnedEn(profile.getTotalWordsLearnedEn() + WordRepository.WORDS_PER_DAY);
+        }
         profile.setCurrentWordInDay(0);
         profile.setCurrentDayIndex(profile.getCurrentDayIndex() + 1);
 

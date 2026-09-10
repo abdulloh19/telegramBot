@@ -1619,6 +1619,11 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         Word word = wordOpt.get();
         profile.setTotalWordsLearned(profile.getTotalWordsLearned() + 1);
+        if (profile.getTargetLanguage() == TargetLanguage.RUSSIAN) {
+            profile.setTotalWordsLearnedRu(profile.getTotalWordsLearnedRu() + 1);
+        } else {
+            profile.setTotalWordsLearnedEn(profile.getTotalWordsLearnedEn() + 1);
+        }
         userRepository.save(profile);
 
         SendMessage message = new SendMessage();
