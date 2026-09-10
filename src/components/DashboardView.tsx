@@ -321,9 +321,12 @@ export const DashboardView: React.FC = () => {
           </div>
 
           <div className="mt-2.5">
-            <div className="text-2xl sm:text-3xl font-black text-white font-mono flex items-baseline gap-1.5">
+            <div className="text-2xl sm:text-3xl font-black text-white font-mono flex items-baseline gap-1.5 flex-wrap">
               <span>{langWordsLearned}</span>
               <span className="text-sm font-bold text-indigo-400">ta</span>
+              <span className="text-xs font-bold text-slate-300 ml-1">
+                ({targetLanguage === 'ru' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili'})
+              </span>
             </div>
             <div className="text-xs text-slate-400 font-medium mt-0.5 flex items-center justify-between">
               <span>Mavjud: {activeWords.length} ta</span>

@@ -49,7 +49,7 @@ const defaultStats: UserStats = {
   streak: 3,
   maxStreak: 5,
   lastActiveDate: new Date().toISOString().split('T')[0],
-  wordsLearnedCount: 18,
+  wordsLearnedCount: 19,
   exercisesCompletedCount: 15,
   quizScores: 120,
   xp: 350,
@@ -58,12 +58,12 @@ const defaultStats: UserStats = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Boshlang'ich holatda: Foydalanuvchi o'rgangan 19 ta Rus tili so'zlari
+// Boshlang'ich holatda: Foydalanuvchi o'rgangan 19 ta Rus tili so'zlari (aniq mavjud ID lar)
 const DEFAULT_COMPLETED_WORD_IDS = [
   'ru_spasibo', 'ru_vdrug', 'ru_mechta', 'ru_pobeda', 'ru_pogoda',
   'ru_ostorojno', 'ru_ulibka', 'ru_drujba', 'ru_pomosh', 'ru_skazka',
   'ru_vremya', 'ru_nadejda', 'ru_schaste', 'ru_puteshestvie', 'ru_vnimanie',
-  'ru_pravda', 'ru_spokoystvie', 'ru_uspex', 'ru_vozmojnost'
+  'ru_pravda', 'ru_spokoystvie', 'ru_uspex', 'ru_zavtra'
 ];
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -78,14 +78,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [completedDialogueIds, setCompletedDialogueIds] = useState<Set<string>>(new Set());
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
 
-  // Load persisted state from localStorage on mount
+  // Load persisted state from localStorage or URL query params on mount
   useEffect(() => {
     try {
-      const savedLang = (localStorage.getItem('mnemo_lang') as TargetLanguage) || 'ru';
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const paramLang = urlParams?.get('lang');
+      const savedLang = (paramLang === 'en' || paramLang === 'ru')
+        ? (paramLang as TargetLanguage)
+        : ((localStorage.getItem('mnemo_lang') as TargetLanguage) || 'ru');
       if (savedLang === 'en' || savedLang === 'ru') setTargetLanguageState(savedLang);
 
-      const savedLevel = (localStorage.getItem('mnemo_level') as WordLevel) || 'BEGINNER';
+      const paramLevel = urlParams?.get('level');
+      const savedLevel = (paramLevel && ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].includes(paramLevel.toUpperCase()))
+        ? (paramLevel.toUpperCase() as WordLevel)
+        : ((localStorage.getItem('mnemo_level') as WordLevel) || 'BEGINNER');
       if (savedLevel) setSelectedLevelState(savedLevel);
+
+      const paramTab = urlParams?.get('tab');
+      if (paramTab) {
+        setActiveTabState(paramTab as AppTab);
+      }
 
       const savedStats = localStorage.getItem('mnemo_stats');
       if (savedStats) setStats(JSON.parse(savedStats));
@@ -96,11 +108,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const parsed = JSON.parse(savedCompleted);
           if (Array.isArray(parsed) && parsed.length > 0) {
             const validIds = parsed.filter((id: string) => MNEMONIC_WORDS.some(w => w.id === id));
-            if (validIds.length > 0) {
-              setCompletedWordIds(new Set(validIds));
-            } else {
-              setCompletedWordIds(new Set(DEFAULT_COMPLETED_WORD_IDS));
-            }
+            // Ensure 19 base Russian words are always preserved
+            const merged = Array.from(new Set([...DEFAULT_COMPLETED_WORD_IDS, ...validIds]));
+            setCompletedWordIds(new Set(merged));
           } else {
             setCompletedWordIds(new Set(DEFAULT_COMPLETED_WORD_IDS));
           }
