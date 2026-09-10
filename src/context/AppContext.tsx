@@ -16,7 +16,12 @@ interface AppContextType {
   
   // Data filtered by active language & level
   activeWords: MnemonicWord[];
+  availableDialogues: DailyDialogue[];
   activeDialogue: DailyDialogue | null;
+  selectedDialogueId: string | null;
+  setSelectedDialogueId: (id: string | null) => void;
+  completedDialogueIds: Set<string>;
+  markDialogueCompleted: (dialogueId: string) => void;
   currentWordIndex: number;
   setCurrentWordIndex: (idx: number) => void;
   currentWord: MnemonicWord | null;
@@ -24,8 +29,11 @@ interface AppContextType {
   // Progress & Stats
   stats: UserStats;
   completedWordIds: Set<string>;
+  completedWordsRu: MnemonicWord[];
+  completedWordsEn: MnemonicWord[];
   favorites: Set<string>;
   markWordCompleted: (wordId: string) => void;
+  toggleWordCompleted: (wordId: string) => void;
   toggleFavorite: (wordId: string) => void;
   recordExerciseResult: (correctCount: number, total: number) => void;
   recordQuizScore: (scoreDelta: number) => void;
@@ -58,6 +66,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [stats, setStats] = useState<UserStats>(defaultStats);
   const [completedWordIds, setCompletedWordIds] = useState<Set<string>>(new Set(['ru_spasibo', 'ru_vdrug']));
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [selectedDialogueId, setSelectedDialogueId] = useState<string | null>(null);
+  const [completedDialogueIds, setCompletedDialogueIds] = useState<Set<string>>(new Set());
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
 
   // Load persisted state from localStorage on mount
@@ -74,6 +84,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const savedCompleted = localStorage.getItem('mnemo_completed');
       if (savedCompleted) setCompletedWordIds(new Set(JSON.parse(savedCompleted)));
+
+      const savedCompletedDialogues = localStorage.getItem('mnemo_completed_dialogues');
+      if (savedCompletedDialogues) setCompletedDialogueIds(new Set(JSON.parse(savedCompletedDialogues)));
 
       const savedFavs = localStorage.getItem('mnemo_favs');
       if (savedFavs) setFavorites(new Set(JSON.parse(savedFavs)));
@@ -194,13 +207,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return activeWords[safeIdx];
   }, [activeWords, currentWordIndex]);
 
-  // Filter dialogue by language and level
+  // Available dialogues for active language
+  const availableDialogues = useMemo(() => {
+    return DAILY_DIALOGUES.filter(d => d.language === targetLanguage);
+  }, [targetLanguage]);
+
+  // Active dialogue based on user selection or fallback
   const activeDialogue = useMemo(() => {
-    const match = DAILY_DIALOGUES.find(
-      d => d.language === targetLanguage && d.level === selectedLevel
-    );
-    return match || DAILY_DIALOGUES.find(d => d.language === targetLanguage) || null;
-  }, [targetLanguage, selectedLevel]);
+    if (selectedDialogueId) {
+      const match = availableDialogues.find(d => d.id === selectedDialogueId);
+      if (match) return match;
+    }
+    return availableDialogues[0] || null;
+  }, [availableDialogues, selectedDialogueId]);
+
+  const markDialogueCompleted = (dialogueId: string) => {
+    setCompletedDialogueIds(prev => {
+      const next = new Set(prev);
+      next.add(dialogueId);
+      try {
+        localStorage.setItem('mnemo_completed_dialogues', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+    addXp(30);
+  };
+
+  // Language-specific completed words lists
+  const completedWordsRu = useMemo(() => {
+    return MNEMONIC_WORDS.filter(w => w.language === 'ru' && completedWordIds.has(w.id));
+  }, [completedWordIds]);
+
+  const completedWordsEn = useMemo(() => {
+    return MNEMONIC_WORDS.filter(w => w.language === 'en' && completedWordIds.has(w.id));
+  }, [completedWordIds]);
 
   const markWordCompleted = (wordId: string) => {
     setCompletedWordIds(prev => {
@@ -220,6 +260,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         localStorage.setItem('mnemo_stats', JSON.stringify(next));
       } catch {}
+      return next;
+    });
+  };
+
+  const toggleWordCompleted = (wordId: string) => {
+    audioManager.playClickSound();
+    setCompletedWordIds(prev => {
+      const next = new Set(prev);
+      const isAlreadyCompleted = next.has(wordId);
+      if (isAlreadyCompleted) {
+        next.delete(wordId);
+      } else {
+        next.add(wordId);
+      }
+      try {
+        localStorage.setItem('mnemo_completed', JSON.stringify(Array.from(next)));
+      } catch {}
+
+      setStats(prevStats => {
+        const nextCount = isAlreadyCompleted
+          ? Math.max(0, prevStats.wordsLearnedCount - 1)
+          : prevStats.wordsLearnedCount + 1;
+        const updated = {
+          ...prevStats,
+          wordsLearnedCount: nextCount,
+        };
+        try {
+          localStorage.setItem('mnemo_stats', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
       return next;
     });
   };
@@ -299,14 +371,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeTab,
         setActiveTab,
         activeWords,
+        availableDialogues,
         activeDialogue,
+        selectedDialogueId,
+        setSelectedDialogueId,
+        completedDialogueIds,
+        markDialogueCompleted,
         currentWordIndex,
         setCurrentWordIndex,
         currentWord,
         stats,
         completedWordIds,
+        completedWordsRu,
+        completedWordsEn,
         favorites,
         markWordCompleted,
+        toggleWordCompleted,
         toggleFavorite,
         recordExerciseResult,
         recordQuizScore,

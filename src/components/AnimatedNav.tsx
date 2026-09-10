@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Trophy,
   Search,
+  BookMarked,
 } from 'lucide-react';
 
 interface NavItem {
@@ -80,6 +81,14 @@ export const AnimatedNav: React.FC = () => {
       icon: Trophy,
       badge: `${stats.quizScores}p`,
       color: 'from-amber-500 to-orange-600',
+    },
+    {
+      id: 'vocabulary',
+      label: 'Lug\'atim',
+      sublabel: 'Words',
+      icon: BookMarked,
+      badge: `${stats.wordsLearnedCount}`,
+      color: 'from-blue-500 to-indigo-600',
     },
     {
       id: 'search',

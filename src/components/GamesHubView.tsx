@@ -19,6 +19,11 @@ import {
   Clock,
   ArrowRight,
   HelpCircle,
+  Shuffle,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Check,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { audioManager } from '@/utils/audio';
@@ -50,7 +55,7 @@ const EN_GRAMMAR_SORT_ITEMS = [
 ];
 
 export const GamesHubView: React.FC = () => {
-  const { targetLanguage, activeWords, speakWord, stats, addXp } = useApp();
+  const { targetLanguage, activeWords, speakWord, stats, addXp, setActiveTab } = useApp();
   const [activeGame, setActiveGame] = useState<GameMode>('flashcards');
 
   // XP & Level calculations
@@ -66,31 +71,124 @@ export const GamesHubView: React.FC = () => {
   const levelProgress = Math.min(100, Math.round((currentXp / levelInfo.next) * 100));
 
   // ==========================================
-  // GAME 1: 3D FLASHCARD STUDIO
+  // GAME 1: 3D FLASHCARD STUDIO (Quizlet Style)
   // ==========================================
+  const [deck, setDeck] = useState<MnemonicWord[]>([]);
   const [cardIndex, setCardIndex] = useState<number>(0);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
-  const currentCardWord = activeWords[cardIndex] || activeWords[0];
+  const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
+  const [learningIds, setLearningIds] = useState<Set<string>>(new Set());
+  const [isDeckFinished, setIsDeckFinished] = useState<boolean>(false);
+
+  // Touch/swipe gesture state for mobile
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.changedTouches[0].screenX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].screenX;
+    const swipeDelta = touchStartX.current - touchEndX.current;
+    if (Math.abs(swipeDelta) < 50) return; // Too small — ignore
+    if (swipeDelta > 50) handleCardDecision(true);   // Swipe left → mastered
+    if (swipeDelta < -50) handleCardDecision(false); // Swipe right → learning
+  };
+
+  useEffect(() => {
+    if (activeWords && activeWords.length > 0) {
+      setDeck([...activeWords]);
+      setCardIndex(0);
+      setIsFlipped(false);
+      setMasteredIds(new Set());
+      setLearningIds(new Set());
+      setIsDeckFinished(false);
+    }
+  }, [activeWords, targetLanguage]);
+
+  const currentCardWord = deck[cardIndex] || activeWords[0];
 
   const handleFlipCard = () => {
     audioManager.playClickSound();
     setIsFlipped(prev => !prev);
   };
 
-  const handleNextCard = (mastered: boolean) => {
+  const handleCardDecision = (mastered: boolean) => {
+    if (!currentCardWord) return;
+
     if (mastered) {
       audioManager.playSuccessSound();
-      addXp(10);
-      confetti({ particleCount: 20, spread: 40, origin: { y: 0.7 } });
+      addXp(15);
+      setMasteredIds(prev => new Set(prev).add(currentCardWord.id));
+      confetti({ particleCount: 25, spread: 50, origin: { y: 0.75 } });
     } else {
       audioManager.playClickSound();
+      setLearningIds(prev => new Set(prev).add(currentCardWord.id));
     }
 
     setIsFlipped(false);
     setTimeout(() => {
-      setCardIndex(prev => (prev + 1) % activeWords.length);
-    }, 200);
+      if (cardIndex < deck.length - 1) {
+        setCardIndex(prev => prev + 1);
+      } else {
+        setIsDeckFinished(true);
+      }
+    }, 250);
   };
+
+  const handlePrevCard = () => {
+    if (cardIndex > 0) {
+      audioManager.playClickSound();
+      setIsFlipped(false);
+      setCardIndex(prev => prev - 1);
+    }
+  };
+
+  const handleNextCardNav = () => {
+    if (cardIndex < deck.length - 1) {
+      audioManager.playClickSound();
+      setIsFlipped(false);
+      setCardIndex(prev => prev + 1);
+    } else {
+      setIsDeckFinished(true);
+    }
+  };
+
+  const handleShuffleDeck = () => {
+    audioManager.playClickSound();
+    setIsFlipped(false);
+    setDeck(prev => [...prev].sort(() => Math.random() - 0.5));
+    setCardIndex(0);
+    setIsDeckFinished(false);
+  };
+
+  const handleRestartDeck = () => {
+    audioManager.playClickSound();
+    setIsFlipped(false);
+    setCardIndex(0);
+    setMasteredIds(new Set());
+    setLearningIds(new Set());
+    setIsDeckFinished(false);
+  };
+
+  useEffect(() => {
+    if (activeGame !== 'flashcards' || isDeckFinished) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleFlipCard();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        handleCardDecision(false);
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        handleCardDecision(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeGame, isDeckFinished, cardIndex, deck, isFlipped]);
 
   // ==========================================
   // GAME 2: MEMORY MATCH (Xotira Juftliklari)
@@ -378,108 +476,294 @@ export const GamesHubView: React.FC = () => {
       </div>
 
       {/* ==================================================== */}
-      {/* MODE 1: 3D FLASHCARD STUDIO */}
+      {/* MODE 1: 3D FLASHCARD STUDIO (Quizlet Style) */}
       {/* ==================================================== */}
-      {activeGame === 'flashcards' && currentCardWord && (
+      {activeGame === 'flashcards' && (
         <div className="space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>🎴 3D Kartochka (Aylantirib o'rganing)</span>
-            <span className="font-mono text-indigo-400 font-bold">
-              {cardIndex + 1} / {activeWords.length}
-            </span>
-          </div>
+          {isDeckFinished ? (
+            // Quizlet-style Deck Completion Card
+            <div className="p-7 sm:p-9 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/40 shadow-2xl text-center space-y-6 animate-fade-in">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-3xl shadow-lg shadow-amber-500/20">
+                🏆
+              </div>
 
-          {/* 3D Flip Card Container */}
-          <div
-            onClick={handleFlipCard}
-            className="w-full min-h-[260px] p-6 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-950/90 border border-slate-700/80 shadow-2xl backdrop-blur-xl flex flex-col justify-between cursor-pointer transition-all duration-300 hover:border-indigo-500/50 group select-none relative overflow-hidden"
-          >
-            {/* Ambient inner glow */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="space-y-2">
+                <h3 className="text-2xl sm:text-3xl font-black text-white">
+                  Ajoyib! Barcha kartochkalarni ko'rib chiqdingiz!
+                </h3>
+                <p className="text-sm text-slate-300 max-w-md mx-auto">
+                  Mnemotexnik assotsiatsiyalar xotirangizda mustahkamlandi. Endi bilimlaringizni test orqali sinab ko'ring!
+                </p>
+              </div>
 
-            {!isFlipped ? (
-              // FRONT SIDE: Word, Pronunciation, Sound
-              <div className="space-y-4 text-center my-auto">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {targetLanguage === 'ru' ? '🇷🇺 Ruscha So\'z' : '🇬🇧 Inglizcha So\'z'}
-                </div>
-
-                <div className="space-y-1">
-                  <div className="text-3xl sm:text-4xl font-black text-white tracking-tight uppercase">
-                    {currentCardWord.word}
+              <div className="grid grid-cols-2 gap-3.5 max-w-xs mx-auto">
+                <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-center">
+                  <div className="text-3xl font-black text-emerald-400 font-mono">
+                    {masteredIds.size}
                   </div>
-                  <div className="text-sm font-mono text-indigo-400">
-                    {currentCardWord.pronunciation}
+                  <div className="text-xs font-bold text-emerald-300 mt-1">
+                    Yodda qoldi
                   </div>
                 </div>
 
-                <div className="pt-2 flex justify-center">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      speakWord(currentCardWord.word);
+                <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-center">
+                  <div className="text-3xl font-black text-amber-400 font-mono">
+                    {learningIds.size}
+                  </div>
+                  <div className="text-xs font-bold text-amber-300 mt-1">
+                    Takrorlash kerak
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => setActiveTab('quiz')}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <Trophy className="w-4 h-4" />
+                  <span>🎯 Viktorinada (Quiz) Sinash</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={handleRestartDeck}
+                  className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4 text-amber-400" />
+                  <span>Qayta boshlash</span>
+                </button>
+
+                <button
+                  onClick={handleShuffleDeck}
+                  className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Shuffle className="w-4 h-4 text-indigo-400" />
+                  <span>Aralashtirish</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            currentCardWord && (
+              <>
+                {/* Quizlet-style Progress Bar & Controls */}
+                <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3 font-semibold">
+                      <span className="flex items-center gap-1.5 text-emerald-400">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>{masteredIds.size} yodda qoldi</span>
+                      </span>
+                      <span className="text-slate-600">•</span>
+                      <span className="flex items-center gap-1.5 text-amber-400">
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>{learningIds.size} takrorlash</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleShuffleDeck}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+                        title="Kartalarni aralashtirish"
+                      >
+                        <Shuffle className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={handleRestartDeck}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+                        title="Boshidan qayta boshlash"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="font-mono text-indigo-400 font-bold px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30">
+                        {cardIndex + 1} / {deck.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Horizontal Segmented Progress Bar */}
+                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden flex">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-300"
+                      style={{ width: `${(masteredIds.size / (deck.length || 1)) * 100}%` }}
+                    />
+                    <div
+                      className="h-full bg-amber-500 transition-all duration-300"
+                      style={{ width: `${(learningIds.size / (deck.length || 1)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* 3D Physical Flip Card Container (Quizlet Style) */}
+                <div
+                  onClick={handleFlipCard}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
+                  className="relative w-full cursor-pointer select-none group"
+                  style={{ perspective: '1200px', minHeight: '310px' }}
+                >
+                  <div
+                    className="relative w-full rounded-3xl transition-transform duration-500"
+                    style={{
+                      transformStyle: 'preserve-3d',
+                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                      minHeight: '310px',
                     }}
-                    className="p-3 rounded-2xl bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white transition-all cursor-pointer shadow-lg shadow-indigo-500/20"
-                    title="Talaffuzni tinglash"
                   >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
-                </div>
+                    {/* FRONT SIDE (Original Term / Word) */}
+                    <div
+                      className="absolute inset-0 p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900/95 to-indigo-950/70 border border-indigo-500/40 shadow-2xl backdrop-blur-xl flex flex-col justify-between"
+                      style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                    >
+                      <div className="flex items-center justify-between text-xs text-slate-400 font-bold">
+                        <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider text-[10px]">
+                          {targetLanguage === 'ru' ? '🇷🇺 Ruscha So\'z' : '🇬🇧 Inglizcha So\'z'}
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          3D Kartochka (Quizlet)
+                        </span>
+                      </div>
 
-                <div className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Ma'nosi va mnemonikani ko'rish uchun bosing</span>
-                </div>
-              </div>
-            ) : (
-              // BACK SIDE: Mnemonic, Uzbek Meaning, Example
-              <div className="space-y-3.5 animate-fade-in my-auto">
-                <div className="text-center space-y-1">
-                  <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
-                    O'zbekcha Tarjimasi
+                      <div className="space-y-2 text-center my-auto">
+                        <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight uppercase">
+                          {currentCardWord.word}
+                        </div>
+                        <div className="text-base sm:text-lg font-mono text-indigo-400 font-semibold">
+                          {currentCardWord.pronunciation}
+                        </div>
+
+                        <div className="pt-3 flex justify-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              speakWord(currentCardWord.word);
+                            }}
+                            className="p-3.5 rounded-2xl bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white transition-all cursor-pointer shadow-lg shadow-indigo-500/25 active:scale-95"
+                            title="Talaffuzni tinglash"
+                          >
+                            <Volume2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-slate-400 flex items-center justify-center gap-1.5 pt-2 border-t border-slate-800/80">
+                        <RotateCcw className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Ma'nosi va mnemonikani ko'rish uchun kartaga bosing (yoki Probel)</span>
+                      </div>
+                    </div>
+
+                    {/* BACK SIDE (Uzbek Translation & Mnemonic Hook) */}
+                    <div
+                      className="absolute inset-0 p-6 sm:p-7 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900/95 to-emerald-950/70 border border-emerald-500/40 shadow-2xl backdrop-blur-xl flex flex-col justify-between"
+                      style={{
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider text-[10px]">
+                          🇺🇿 O'zbekcha Ma'nosi
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            speakWord(currentCardWord.word);
+                          }}
+                          className="p-1.5 rounded-xl bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600 hover:text-white transition-all"
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-3.5 my-auto">
+                        <div className="text-center">
+                          <div className="text-2xl sm:text-3xl font-black text-white">
+                            {currentCardWord.uzbekMeaning}
+                          </div>
+                        </div>
+
+                        {/* Mnemonic Hook Banner */}
+                        <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 space-y-1">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                            <Zap className="w-4 h-4" />
+                            <span>Mnemonik Ilmoq: «{currentCardWord.mnemonicHook}»</span>
+                          </div>
+                          <p className="text-xs text-slate-200 italic leading-relaxed font-medium">
+                            {currentCardWord.mnemonicStory}
+                          </p>
+                        </div>
+
+                        {/* Example Sentence */}
+                        <div className="text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1">
+                          <div className="font-semibold text-white">
+                            {currentCardWord.exampleTarget}
+                          </div>
+                          <div className="text-slate-400 italic">
+                            — {currentCardWord.exampleUz}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-slate-400 flex items-center justify-center gap-1.5 pt-2 border-t border-slate-800/80">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Karta orqasini o'rgandingiz. Baholang va keyingisiga o'ting!</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-2xl font-black text-white">
-                    {currentCardWord.uzbekMeaning}
+                </div>
+
+                {/* Quizlet Response Actions & Nav Bar */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => handleCardDecision(false)}
+                      className="py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold text-xs border border-amber-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-lg shadow-amber-500/10"
+                    >
+                      <RotateCcw className="w-4 h-4 text-amber-400" />
+                      <span>Takrorlash kerak</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleCardDecision(true)}
+                      className="py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-xl shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Bilaman! (+15 XP)</span>
+                    </button>
+                  </div>
+
+                  {/* Navigation Helper Buttons */}
+                  <div className="flex items-center justify-between px-2 text-xs text-slate-400">
+                    <button
+                      onClick={handlePrevCard}
+                      disabled={cardIndex === 0}
+                      className="flex items-center gap-1 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer font-medium"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>Oldingi karta</span>
+                    </button>
+
+                    <button
+                      onClick={handleFlipCard}
+                      className="px-3 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer font-medium"
+                    >
+                      Aylantirish (Space)
+                    </button>
+
+                    <button
+                      onClick={handleNextCardNav}
+                      className="flex items-center gap-1 hover:text-white cursor-pointer font-medium"
+                    >
+                      <span>Keyingi karta</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-
-                <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
-                    <Zap className="w-4 h-4" />
-                    <span>Mnemonik Ilmoq: «{currentCardWord.mnemonicHook}»</span>
-                  </div>
-                  <p className="text-xs text-slate-200 italic leading-relaxed">
-                    {currentCardWord.mnemonicStory}
-                  </p>
-                </div>
-
-                <div className="text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-0.5">
-                  <span className="text-indigo-400 font-semibold">Misol: </span>
-                  <span className="text-white font-medium">{currentCardWord.exampleTarget}</span>
-                  <span className="text-slate-400"> — {currentCardWord.exampleUz}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons: Review vs Mastered */}
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <button
-              onClick={() => handleNextCard(false)}
-              className="py-3.5 px-4 rounded-2xl bg-slate-850 hover:bg-slate-800 text-slate-300 font-semibold text-xs border border-slate-700/60 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4 text-amber-400" />
-              <span>Qayta takrorlash</span>
-            </button>
-
-            <button
-              onClick={() => handleNextCard(true)}
-              className="py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Yodda qoldi! (+10 XP)</span>
-            </button>
-          </div>
+              </>
+            )
+          )}
         </div>
       )}
 

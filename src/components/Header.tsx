@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Trophy,
   ArrowRight,
+  BookMarked,
 } from 'lucide-react';
 import { audioManager } from '@/utils/audio';
 
@@ -102,6 +103,14 @@ export const Header: React.FC = () => {
       color: 'from-amber-500 to-orange-600',
     },
     {
+      id: 'vocabulary' as AppTab,
+      title: 'Mening Lug\'atim (Rus & Ingliz)',
+      subtitle: 'Yodlangan so\'zlar, statistika va alohida til bo\'limlari',
+      icon: BookMarked,
+      badge: `${stats.wordsLearnedCount} ta`,
+      color: 'from-blue-500 to-indigo-600',
+    },
+    {
       id: 'search' as AppTab,
       title: 'Mnemotexnik Qidiruv',
       subtitle: 'Istalgan so\'zni tarjimasi yoki talaffuzi bilan qidiring',
@@ -167,6 +176,19 @@ export const Header: React.FC = () => {
           {/* Right Controls: Search, Level, & Sleek Super Menyu */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             
+            {/* Quick Vocabulary / My Words Button */}
+            <button
+              onClick={() => handleSelectTab('vocabulary')}
+              title="Mening Lug'atim & O'zlashtirilgan So'zlar"
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+                activeTab === 'vocabulary'
+                  ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-md shadow-indigo-500/20'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-indigo-400 hover:bg-slate-850'
+              }`}
+            >
+              <BookMarked className="w-4 h-4" />
+            </button>
+
             {/* Quick Search Button */}
             <button
               onClick={() => handleSelectTab('search')}

@@ -70,7 +70,16 @@ export const DashboardView: React.FC = () => {
     currentWordIndex,
     speakWord,
     isAudioPlaying,
+    completedWordsRu,
+    completedWordsEn,
+    completedDialogueIds,
   } = useApp();
+
+  // Tilga mos holda so'zlar va dialoglar statistikasi
+  const langWordsLearned = targetLanguage === 'ru' ? completedWordsRu.length : completedWordsEn.length;
+  const langDialogsCompleted = Array.from(completedDialogueIds).filter(id =>
+    targetLanguage === 'ru' ? id.startsWith('ru_') : id.startsWith('en_')
+  ).length;
 
   const [usersData, setUsersData] = useState<UsersApiResponse | null>(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
@@ -216,9 +225,38 @@ export const DashboardView: React.FC = () => {
             <ArrowRight className="w-5 h-5" />
           </button>
         </div>
+
+        {/* 🌐 Jonli Bot Foydalanuvchilari Hisoblagichi (Total Users & Active Today) */}
+        <div className="relative z-10 mt-5 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800/90 border border-indigo-500/30 text-slate-200 shadow-sm">
+              <Users className="w-4 h-4 text-indigo-400" />
+              <span className="text-slate-400 font-medium">Jami bot o'quvchilari:</span>
+              <span className="text-white font-black font-mono text-sm">
+                {isLoadingUsers && !usersData ? '...' : (usersData?.totalUsers ?? 0)} ta
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-950/50 border border-emerald-500/30 text-emerald-300 shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-emerald-300 font-medium">Bugun faol:</span>
+              <span className="text-white font-black font-mono text-sm">
+                {isLoadingUsers && !usersData ? '...' : (usersData?.activeTodayCount ?? 0)} ta
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Real-time Telegram sinxronizatsiya</span>
+          </div>
+        </div>
       </div>
 
-      {/* 4 Statistics Cards Grid */}
+      {/* 4 Statistics Cards Grid — Tilga mos holda */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {/* Streak Card */}
         <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg flex flex-col justify-between">
@@ -236,27 +274,35 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
 
-        {/* Mastered Words */}
-        <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg flex flex-col justify-between">
+        {/* Mastered Words — Joriy tilga moslashtrilgan */}
+        <div
+          onClick={() => setActiveTab('vocabulary')}
+          className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-850 shadow-lg flex flex-col justify-between cursor-pointer transition-all group"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs sm:text-sm text-slate-300 font-bold">Yodlangan so'z</span>
-            <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-400">
+            <span className="text-xs sm:text-sm text-slate-300 font-bold group-hover:text-indigo-300 transition-colors">
+              {targetLanguage === 'ru' ? '🇷🇺 Rus so\'zlari' : '🇬🇧 Ing so\'zlari'}
+            </span>
+            <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-400 group-hover:scale-110 transition-transform">
               <BookMarked className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-2.5">
             <div className="text-2xl sm:text-3xl font-black text-white font-mono">
-              {stats.wordsLearnedCount}{' '}
+              {langWordsLearned}{' '}
               <span className="text-sm font-bold text-indigo-400">ta</span>
             </div>
-            <div className="text-xs text-slate-400 font-medium mt-0.5">Mavjud: {activeWords.length} ta</div>
+            <div className="text-xs text-indigo-400 font-bold mt-0.5 flex items-center gap-1">
+              <span>Lug'atni ko'rish</span>
+              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </div>
           </div>
         </div>
 
-        {/* Exercises */}
+        {/* Exercises — tilga moslashtrilgan dialoglar */}
         <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs sm:text-sm text-slate-300 font-bold">Bajarilgan test</span>
+            <span className="text-xs sm:text-sm text-slate-300 font-bold">Bajarilgan mashq</span>
             <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-400">
               <CheckCircle2 className="w-5 h-5" />
             </div>
@@ -266,7 +312,9 @@ export const DashboardView: React.FC = () => {
               {stats.exercisesCompletedCount}{' '}
               <span className="text-sm font-bold text-emerald-400">ta</span>
             </div>
-            <div className="text-xs text-slate-400 font-medium mt-0.5">Aniqlik: 94%</div>
+            <div className="text-xs text-slate-400 font-medium mt-0.5">
+              {langDialogsCompleted} dialog tugatildi
+            </div>
           </div>
         </div>
 
@@ -609,6 +657,71 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 📚 DUAL-LANGUAGE VOCABULARY & PROGRESS HUB (Strict Separation) */}
+      <div
+        onClick={() => setActiveTab('vocabulary')}
+        className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 hover:border-indigo-500/60 shadow-xl cursor-pointer transition-all group"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 group-hover:scale-105 transition-transform">
+                <BookMarked className="w-5 h-5" />
+              </div>
+              <h3 className="text-base sm:text-lg font-black text-white group-hover:text-indigo-300 transition-colors flex items-center gap-2">
+                <span>📚 Mening Lug'atim & O'zlashtirilgan So'zlar</span>
+                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  Alohida Bo'lim
+                </span>
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">
+              Rus va ingliz tillari bo'yicha so'zlar, audio talaffuzlar va kundalik dialoglar mutlaqo mustaqil yuritiladi.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-bold text-indigo-400 group-hover:text-indigo-300 hidden sm:inline">
+              Lug'atga o'tish
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 group-hover:bg-indigo-500 text-white flex items-center justify-center shadow-md shadow-indigo-600/30 transition-all">
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+        </div>
+
+        {/* Dual Language Counters Comparison */}
+        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-800/80">
+          {/* Russian Progress */}
+          <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🇷🇺</span>
+              <div>
+                <div className="text-xs font-bold text-white">Rus Tili</div>
+                <div className="text-[11px] text-blue-300 font-medium">
+                  {completedWordsRu.length} ta yodlangan
+                </div>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-slate-400">6 dialog</span>
+          </div>
+
+          {/* English Progress */}
+          <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🇬🇧</span>
+              <div>
+                <div className="text-xs font-bold text-white">Ingliz Tili</div>
+                <div className="text-[11px] text-indigo-300 font-medium">
+                  {completedWordsEn.length} ta yodlangan
+                </div>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-slate-400">6 dialog</span>
+          </div>
+        </div>
+      </div>
 
       {/* 3 Interactive Quick Modules Grid */}
       <div className="grid sm:grid-cols-3 gap-3.5">

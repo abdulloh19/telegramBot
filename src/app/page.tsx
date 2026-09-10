@@ -11,6 +11,7 @@ import { DialogueView } from '@/components/DialogueView';
 import { PracticeView } from '@/components/PracticeView';
 import { SpeedQuizView } from '@/components/SpeedQuizView';
 import { SearchView } from '@/components/SearchView';
+import { LearnedWordsView } from '@/components/LearnedWordsView';
 
 export default function Home() {
   const { activeTab } = useApp();
@@ -34,6 +35,7 @@ export default function Home() {
         {activeTab === 'practice' && <PracticeView />}
         {activeTab === 'quiz' && <SpeedQuizView />}
         {activeTab === 'search' && <SearchView />}
+        {activeTab === 'vocabulary' && <LearnedWordsView />}
       </main>
     </div>
   );

@@ -2,7 +2,7 @@ export type TargetLanguage = 'en' | 'ru';
 
 export type WordLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 
-export type AppTab = 'dashboard' | 'lesson' | 'grammar' | 'games' | 'dialogue' | 'practice' | 'quiz' | 'search';
+export type AppTab = 'dashboard' | 'lesson' | 'grammar' | 'games' | 'dialogue' | 'practice' | 'quiz' | 'search' | 'vocabulary';
 
 export type GameMode = 'flashcards' | 'match' | 'scramble' | 'grammarSort';
 
@@ -46,6 +46,7 @@ export interface DailyDialogue {
   language: TargetLanguage;
   lines: DialogueLine[];
   targetWords: string[];
+  category?: 'taxi' | 'travel' | 'market' | 'cafe' | 'pharmacy' | 'combo' | 'general';
 }
 
 export interface ExerciseQuestion {
