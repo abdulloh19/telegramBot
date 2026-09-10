@@ -63,6 +63,7 @@ interface UsersApiResponse {
 export const DashboardView: React.FC = () => {
   const {
     targetLanguage,
+    setTargetLanguage,
     selectedLevel,
     setActiveTab,
     stats,
@@ -274,27 +275,62 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
 
-        {/* Mastered Words — Joriy tilga moslashtrilgan */}
+        {/* Mastered Words — "Yodlangan so'z" kartochkasi (Tilga mos holda) */}
         <div
           onClick={() => setActiveTab('vocabulary')}
           className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-850 shadow-lg flex flex-col justify-between cursor-pointer transition-all group"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-1">
             <span className="text-xs sm:text-sm text-slate-300 font-bold group-hover:text-indigo-300 transition-colors">
-              {targetLanguage === 'ru' ? '🇷🇺 Rus so\'zlari' : '🇬🇧 Ing so\'zlari'}
+              Yodlangan so'z
             </span>
-            <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-400 group-hover:scale-110 transition-transform">
-              <BookMarked className="w-5 h-5" />
+
+            {/* Tilni tanlash / almashtirish tugmalari */}
+            <div className="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-xl border border-slate-800 shrink-0">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTargetLanguage('ru');
+                }}
+                className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  targetLanguage === 'ru'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+                title="Rus tilida yodlangan so'zlar"
+              >
+                🇷🇺 Ru
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTargetLanguage('en');
+                }}
+                className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  targetLanguage === 'en'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+                title="Ingliz tilida yodlangan so'zlar"
+              >
+                🇬🇧 En
+              </button>
             </div>
           </div>
+
           <div className="mt-2.5">
-            <div className="text-2xl sm:text-3xl font-black text-white font-mono">
-              {langWordsLearned}{' '}
+            <div className="text-2xl sm:text-3xl font-black text-white font-mono flex items-baseline gap-1.5">
+              <span>{langWordsLearned}</span>
               <span className="text-sm font-bold text-indigo-400">ta</span>
             </div>
-            <div className="text-xs text-indigo-400 font-bold mt-0.5 flex items-center gap-1">
-              <span>Lug'atni ko'rish</span>
-              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            <div className="text-xs text-slate-400 font-medium mt-0.5 flex items-center justify-between">
+              <span>Mavjud: {activeWords.length} ta</span>
+              <span className="text-indigo-400 font-bold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                <span>Lug'at</span>
+                <ArrowRight className="w-3 h-3" />
+              </span>
             </div>
           </div>
         </div>

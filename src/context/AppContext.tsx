@@ -58,15 +58,12 @@ const defaultStats: UserStats = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Boshlang'ich holatda: 15 ta Rus tili va 10 ta Ingliz tili o'zlashtirilgan so'zlari
+// Boshlang'ich holatda: Foydalanuvchi o'rgangan 19 ta Rus tili so'zlari
 const DEFAULT_COMPLETED_WORD_IDS = [
-  // 15 ta Rus tili
   'ru_spasibo', 'ru_vdrug', 'ru_mechta', 'ru_pobeda', 'ru_pogoda',
   'ru_ostorojno', 'ru_ulibka', 'ru_drujba', 'ru_pomosh', 'ru_skazka',
   'ru_vremya', 'ru_nadejda', 'ru_schaste', 'ru_puteshestvie', 'ru_vnimanie',
-  // 10 ta Ingliz tili
-  'en_abandon', 'en_curious', 'en_drowsy', 'en_hesitate', 'en_fragile',
-  'en_novice', 'en_quench', 'en_obstacle', 'en_marvellous', 'en_candid'
+  'ru_pravda', 'ru_spokoystvie', 'ru_uspex', 'ru_vozmojnost'
 ];
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -97,9 +94,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (savedCompleted) {
         try {
           const parsed = JSON.parse(savedCompleted);
-          if (Array.isArray(parsed)) {
-            const merged = Array.from(new Set([...DEFAULT_COMPLETED_WORD_IDS, ...parsed]));
-            setCompletedWordIds(new Set(merged));
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCompletedWordIds(new Set(parsed));
           } else {
             setCompletedWordIds(new Set(DEFAULT_COMPLETED_WORD_IDS));
           }
