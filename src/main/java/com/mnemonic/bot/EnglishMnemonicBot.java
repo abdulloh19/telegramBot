@@ -519,6 +519,14 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             sendOverallBotStats(chatId, profile);
         } else if (data.equals("my_words_list")) {
             sendMyLearnedWords(chatId, profile);
+        } else if (data.equals("mywords_lang_ru")) {
+            int msgId = (update.getCallbackQuery() != null && update.getCallbackQuery().getMessage() != null)
+                    ? update.getCallbackQuery().getMessage().getMessageId() : -1;
+            sendMyLearnedWords(chatId, profile, TargetLanguage.RUSSIAN, msgId);
+        } else if (data.equals("mywords_lang_en")) {
+            int msgId = (update.getCallbackQuery() != null && update.getCallbackQuery().getMessage() != null)
+                    ? update.getCallbackQuery().getMessage().getMessageId() : -1;
+            sendMyLearnedWords(chatId, profile, TargetLanguage.ENGLISH, msgId);
         } else if (data.startsWith("dialog_topic_")) {
             String topicId = data.replace("dialog_topic_", "");
             com.mnemonic.model.DailyDialogue d = dialogueService.getDialogueById(topicId);
@@ -1355,55 +1363,98 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     }
 
     private void sendMyLearnedWords(long chatId, UserProfile profile) {
-        TargetLanguage lang = profile.getTargetLanguage() != null ? profile.getTargetLanguage() : TargetLanguage.ENGLISH;
+        TargetLanguage initialLang = profile.getTargetLanguage() != null ? profile.getTargetLanguage() : TargetLanguage.RUSSIAN;
+        sendMyLearnedWords(chatId, profile, initialLang, -1);
+    }
+
+    private void sendMyLearnedWords(long chatId, UserProfile profile, TargetLanguage lang, int messageId) {
         String langTitle = (lang == TargetLanguage.RUSSIAN) ? "🇷🇺 Rus Tili" : "🇬🇧 Ingliz Tili";
+        int wordsLearnedCount = profile.getWordsLearnedByLanguage(lang);
 
         List<Word> allLevelWords = wordRepository.getWordsByLevel(
                 profile.getSelectedLevel() != null ? profile.getSelectedLevel() : WordLevel.BEGINNER,
                 lang
         );
-        int wordsLearned = Math.min(profile.getTotalWordsLearned(), allLevelWords.size());
+        int wordsLearned = Math.min(wordsLearnedCount, allLevelWords.size());
 
         StringBuilder sb = new StringBuilder();
         sb.append("📚 <b>SIZNING YODLANGAN SO'ZLARINGIZ:</b>\n\n");
-        sb.append("🌐 <b>Til bo'limi:</b> ").append(langTitle).append("\n");
-        sb.append("📊 <b>Jami o'rganilgan so'zlar soni:</b> <b>").append(profile.getTotalWordsLearned()).append(" ta</b>\n\n");
+        sb.append("🌐 <b>Tanlangan til:</b> ").append(langTitle).append("\n");
+        sb.append("📊 <b>Jami o'rganilgan so'zlar soni:</b> <b>").append(wordsLearnedCount).append(" ta</b>\n\n");
 
-        if (profile.getTotalWordsLearned() == 0 || allLevelWords.isEmpty()) {
+        if (wordsLearnedCount == 0 || allLevelWords.isEmpty()) {
             sb.append("💡 <i>Hali birorta so'z o'rganilmadi. '📅 Kunlik 20 ta so'z' tugmasi orqali ilk darsingizni boshlang!</i>");
         } else {
-            sb.append("📝 <b>O'zlashtirilgan so'zlar ro'yxati:</b>\n");
-            int limit = Math.min(wordsLearned > 0 ? wordsLearned : 10, allLevelWords.size());
-            for (int i = 0; i < limit; i++) {
+            sb.append("📝 <b>O'zlashtirilgan so'zlar ro'yxati (").append(wordsLearned).append(" ta):</b>\n");
+            for (int i = 0; i < wordsLearned; i++) {
                 Word w = allLevelWords.get(i);
                 sb.append(i + 1).append(". <b>").append(w.getEnglishWord()).append("</b> ")
                   .append(w.getPronunciation() != null ? w.getPronunciation() : "").append(" — <i>").append(w.getUzbekMeaning()).append("</i>\n")
                   .append("   🔗 «").append(w.getMnemonicHook()).append("»\n");
             }
-            if (profile.getTotalWordsLearned() > limit) {
-                sb.append("\n✨ <i>... va yana ").append(profile.getTotalWordsLearned() - limit).append(" ta so'z Super Ilovada to'liq audio bilan mavjud!</i>");
+            if (wordsLearnedCount > wordsLearned) {
+                sb.append("\n✨ <i>... va yana ").append(wordsLearnedCount - wordsLearned).append(" ta so'z Super Ilovada to'liq audio bilan mavjud!</i>");
             }
         }
 
-        SendMessage msg = new SendMessage();
-        msg.setChatId(String.valueOf(chatId));
-        msg.setText(sb.toString());
-        msg.setParseMode("HTML");
-
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-        List<InlineKeyboardButton> r1 = new ArrayList<>();
+
+        // 1-qator: Tilni almashtirish tugmalari (RU 15 ta va EN 10 ta)
+        List<InlineKeyboardButton> langRow = new ArrayList<>();
+        String ruText = (lang == TargetLanguage.RUSSIAN ? "🔘 🇷🇺 Rus tili (" : "🇷🇺 Rus tili (") + profile.getTotalWordsLearnedRu() + " ta)";
+        InlineKeyboardButton ruBtn = new InlineKeyboardButton(ruText);
+        ruBtn.setCallbackData("mywords_lang_ru");
+
+        String enText = (lang == TargetLanguage.ENGLISH ? "🔘 🇬🇧 Ingliz tili (" : "🇬🇧 Ingliz tili (") + profile.getTotalWordsLearnedEn() + " ta)";
+        InlineKeyboardButton enBtn = new InlineKeyboardButton(enText);
+        enBtn.setCallbackData("mywords_lang_en");
+
+        langRow.add(ruBtn);
+        langRow.add(enBtn);
+        rows.add(langRow);
+
+        // 2-qator: Yangi dars boshlash tugmasi
+        List<InlineKeyboardButton> r2 = new ArrayList<>();
         InlineKeyboardButton lessonBtn = new InlineKeyboardButton("📅 Yangi darsni boshlash");
         lessonBtn.setCallbackData("lesson_start");
-        r1.add(lessonBtn);
-        rows.add(r1);
-        markup.setKeyboard(rows);
-        msg.setReplyMarkup(markup);
+        r2.add(lessonBtn);
+        rows.add(r2);
 
-        try {
-            execute(msg);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
+        markup.setKeyboard(rows);
+
+        if (messageId > 0) {
+            EditMessageText edit = new EditMessageText();
+            edit.setChatId(String.valueOf(chatId));
+            edit.setMessageId(messageId);
+            edit.setText(sb.toString());
+            edit.setParseMode("HTML");
+            edit.setReplyMarkup(markup);
+            try {
+                execute(edit);
+            } catch (TelegramApiException e) {
+                SendMessage msg = new SendMessage();
+                msg.setChatId(String.valueOf(chatId));
+                msg.setText(sb.toString());
+                msg.setParseMode("HTML");
+                msg.setReplyMarkup(markup);
+                try {
+                    execute(msg);
+                } catch (TelegramApiException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        } else {
+            SendMessage msg = new SendMessage();
+            msg.setChatId(String.valueOf(chatId));
+            msg.setText(sb.toString());
+            msg.setParseMode("HTML");
+            msg.setReplyMarkup(markup);
+            try {
+                execute(msg);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
         }
     }
 
