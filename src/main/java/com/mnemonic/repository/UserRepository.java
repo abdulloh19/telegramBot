@@ -31,24 +31,61 @@ public class UserRepository {
     }
 
     public synchronized UserProfile getOrCreate(long chatId, String firstName) {
-        return userProfiles.computeIfAbsent(chatId, id -> {
-            UserProfile profile = new UserProfile(chatId, firstName);
+        loadFromDisk();
+        UserProfile profile = userProfiles.get(chatId);
+        if (profile == null) {
+            profile = new UserProfile(chatId, firstName);
+            userProfiles.put(chatId, profile);
             saveToDisk();
-            return profile;
-        });
+        }
+        return profile;
     }
 
     public Optional<UserProfile> get(long chatId) {
+        loadFromDisk();
         return Optional.ofNullable(userProfiles.get(chatId));
     }
 
     public synchronized void save(UserProfile profile) {
+        loadFromDisk();
         userProfiles.put(profile.getChatId(), profile);
         saveToDisk();
     }
 
     public List<UserProfile> getAllProfiles() {
+        loadFromDisk();
         return new ArrayList<>(userProfiles.values());
+    }
+
+    public int getTotalUsersCount() {
+        loadFromDisk();
+        return userProfiles.size();
+    }
+
+    public int getActiveTodayCount(java.time.LocalDate today) {
+        loadFromDisk();
+        if (today == null) today = java.time.LocalDate.now();
+        final java.time.LocalDate targetDate = today;
+        return (int) userProfiles.values().stream()
+                .filter(p -> p.getLastActiveDate() != null && p.getLastActiveDate().equals(targetDate))
+                .count();
+    }
+
+    public List<UserProfile> getInactiveUsers(int minDays) {
+        loadFromDisk();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        List<UserProfile> result = new ArrayList<>();
+        for (UserProfile profile : userProfiles.values()) {
+            if (profile.getLastActiveDate() == null) {
+                result.add(profile);
+            } else {
+                long days = java.time.temporal.ChronoUnit.DAYS.between(profile.getLastActiveDate(), today);
+                if (days >= minDays) {
+                    result.add(profile);
+                }
+            }
+        }
+        return result;
     }
 
     private synchronized void saveToDisk() {

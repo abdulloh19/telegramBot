@@ -22,6 +22,7 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageTe
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
@@ -30,12 +31,13 @@ import org.telegram.telegrambots.meta.api.objects.menubutton.MenuButtonWebApp;
 import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
-    public static final String DEFAULT_WEB_APP_URL = "https://pubs-cultures-salvador-specialties.trycloudflare.com";
+    public static final String DEFAULT_WEB_APP_URL = "https://orlando-sought-existing-acts.trycloudflare.com";
 
     private final String botUsername;
     private final String botToken;
@@ -103,10 +105,90 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            handleTextMessage(update);
-        } else if (update.hasCallbackQuery()) {
-            handleCallbackQuery(update);
+        try {
+            long chatId = 0;
+            if (update.hasMessage()) {
+                chatId = update.getMessage().getChatId();
+                System.out.println("📩 [Update MSG] from chatId=" + chatId + ", text=" + update.getMessage().getText());
+                setupUserMenuButton(chatId);
+                if (update.getMessage().hasText()) {
+                    handleTextMessage(update);
+                } else if (update.getMessage().hasContact()) {
+                    handleContactMessage(update);
+                } else {
+                    String firstName = update.getMessage().getFrom().getFirstName();
+                    UserProfile profile = userRepository.getOrCreate(chatId, firstName);
+                    String username = update.getMessage().getFrom().getUserName();
+                    if (username != null && !username.isBlank()) profile.setUsername(username);
+                    String lastName = update.getMessage().getFrom().getLastName();
+                    if (lastName != null && !lastName.isBlank()) profile.setLastName(lastName);
+                    profile.setLastActiveDate(LocalDate.now());
+                    userRepository.save(profile);
+                    sendWelcomeMessage(chatId, profile);
+                }
+            } else if (update.hasCallbackQuery()) {
+                chatId = update.getCallbackQuery().getMessage().getChatId();
+                System.out.println("📩 [Update CB] from chatId=" + chatId + ", data=" + update.getCallbackQuery().getData());
+                setupUserMenuButton(chatId);
+                handleCallbackQuery(update);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleContactMessage(Update update) {
+        long chatId = update.getMessage().getChatId();
+        String firstName = update.getMessage().getFrom().getFirstName();
+        UserProfile profile = userRepository.getOrCreate(chatId, firstName);
+        if (update.getMessage().getContact() != null) {
+            String phone = update.getMessage().getContact().getPhoneNumber();
+            profile.setPhoneNumber(phone);
+        }
+        String username = update.getMessage().getFrom().getUserName();
+        if (username != null && !username.isBlank()) profile.setUsername(username);
+        String lastName = update.getMessage().getFrom().getLastName();
+        if (lastName != null && !lastName.isBlank()) profile.setLastName(lastName);
+        profile.setLastActiveDate(LocalDate.now());
+        userRepository.save(profile);
+        sendWelcomeMessage(chatId, profile);
+    }
+
+    public void cleanupOldKeyboardForAllUsers() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(1500);
+                for (UserProfile profile : userRepository.getAllProfiles()) {
+                    try {
+                        SendMessage cleanMsg = new SendMessage();
+                        cleanMsg.setChatId(String.valueOf(profile.getChatId()));
+                        cleanMsg.setText("🔄 <b>Tizim yangilandi (Versiya 4.0)!</b>\n\nEski pastki tugmalar olib tashlandi, butun tizim Super Ilovaga ko'chirildi.");
+                        cleanMsg.setParseMode("HTML");
+                        cleanMsg.setReplyMarkup(new ReplyKeyboardRemove(true));
+                        execute(cleanMsg);
+                        Thread.sleep(200);
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }).start();
+    }
+
+    public static final int CURRENT_BOT_VERSION = 4;
+    public static final long ADMIN_CHAT_ID = 5787141744L;
+
+    private void notifyAdmin(String text) {
+        try {
+            SendMessage msg = new SendMessage();
+            msg.setChatId(String.valueOf(ADMIN_CHAT_ID));
+            msg.setText(text);
+            msg.setParseMode("HTML");
+            execute(msg);
+        } catch (Exception e) {
+            // Ignore if admin not started
         }
     }
 
@@ -116,16 +198,53 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         String firstName = update.getMessage().getFrom().getFirstName();
 
         UserProfile profile = userRepository.getOrCreate(chatId, firstName);
+        boolean isNewUser = (profile.getBotVersion() == 0 && profile.getLastActiveDate() == null);
 
-        // Agar foydalanuvchi hali tilni tanlamagan bo'lsa, avval til so'raymiz
+        // Username va familiyani saqlash
+        String username = update.getMessage().getFrom().getUserName();
+        if (username != null && !username.isBlank()) {
+            profile.setUsername(username);
+        }
+        String lastName = update.getMessage().getFrom().getLastName();
+        if (lastName != null && !lastName.isBlank()) {
+            profile.setLastName(lastName);
+        }
+
+        LocalDate today = LocalDate.now();
+        if (profile.getLastReminderDate() != null && profile.getLastReminderDate().equals(today) && !profile.isEnteredAfterReminder()) {
+            profile.setEnteredAfterReminder(true);
+            String uHandle = profile.getUsername() != null ? "@" + profile.getUsername() : "ID: " + chatId;
+            notifyAdmin("🔔 <b>ADMIN BILDIRISHNOMASI:</b>\n\nFoydalanuvchi: <b>" + escapeHtml(profile.getFirstName()) + "</b> (" + uHandle + ")\n🎯 Kunlik eslatmadan so'ng botga qaytib kirdi!\n📚 O'rganayotgan tili: " + (profile.getTargetLanguage() == TargetLanguage.RUSSIAN ? "🇷🇺 Rus tili" : "🇬🇧 Ingliz tili"));
+        }
+
+        if (isNewUser) {
+            String uHandle = username != null ? "@" + username : "Mavjud emas";
+            notifyAdmin("👤 <b>YANGI FOYDALANUVCHI QO'SHILDI:</b>\n\nIsmi: <b>" + escapeHtml(firstName) + "</b>\nUsername: " + uHandle + "\nID: <code>" + chatId + "</code>\n⏰ Sana: " + today);
+        }
+
+        profile.setLastActiveDate(today);
+        userRepository.save(profile);
+
+        // 1. Agar bot yangilangan bo'lsa va foydalanuvchi hali yangi versiyaga /start bosmagan bo'lsa, /start bosish majburiy!
+        if (profile.getBotVersion() > 0 && profile.getBotVersion() < CURRENT_BOT_VERSION && !text.equals("/start")) {
+            sendUpdateMandatoryStartPrompt(chatId, profile);
+            return;
+        }
+
+        // 2. Agar foydalanuvchi hali tilni tanlamagan bo'lsa, avval til so'raymiz
         if (profile.getTargetLanguage() == null && !text.equals("/start")) {
             sendInitialLanguagePrompt(chatId, profile);
             return;
         }
 
-        // Agar foydalanuvchi hali darajasini tanlamagan bo'lsa, avval daraja so'raymiz
+        // 3. Agar foydalanuvchi hali darajasini tanlamagan bo'lsa, avval daraja so'raymiz
         if (profile.getSelectedLevel() == null && !text.equals("/start")) {
             sendInitialLevelPrompt(chatId, profile);
+            return;
+        }
+
+        if (text.startsWith("/broadcast") || text.startsWith("/elon") || text.startsWith("/xabar")) {
+            sendBroadcastToAllUsers(chatId, profile, text);
             return;
         }
 
@@ -133,6 +252,8 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             case "/start":
             case "/menu":
             case "🏠 Asosiy Menyu":
+                profile.setBotVersion(CURRENT_BOT_VERSION);
+                userRepository.save(profile);
                 setupUserMenuButton(chatId);
                 if (profile.getTargetLanguage() == null) {
                     sendInitialLanguagePrompt(chatId, profile);
@@ -192,14 +313,40 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
                 break;
 
             case "🔍 Qidiruv":
-                String langName = (profile.getTargetLanguage() == TargetLanguage.RUSSIAN) ? "ruscha" : "inglizcha";
-                sendMessage(chatId, "🔍 <b>So'z qidirish (" + (profile.getTargetLanguage() == TargetLanguage.RUSSIAN ? "🇷🇺" : "🇬🇧") + "):</b>\n\nIstalgan " + langName + " yoki o'zbekcha so'zni yozib yuboring. Bot uning mnemonikasini topib beradi va audio talaffuzini eshitish imkonini taqdim etadi.");
+            case "/search":
+            case "/qidiruv":
+                sendSearchPromptWithButtons(chatId, profile);
                 break;
 
             case "📱 Web Ilova (Next.js Mini App)":
             case "/app":
             case "/webapp":
                 sendWebAppInfoMessage(chatId, profile);
+                break;
+
+            case "🎴 Xotira O'yinlari & Kartochkalar":
+            case "/games":
+            case "/kartochkalar":
+                sendGamesInfoMessage(chatId, profile);
+                break;
+
+            case "📖 Grammatika Bo'limi":
+            case "/grammar":
+            case "/grammatika":
+                sendGrammarInfoMessage(chatId, profile);
+                break;
+
+            case "📊 Statistika":
+            case "/stats":
+            case "/statistika":
+            case "/admin":
+                sendOverallBotStats(chatId, profile);
+                break;
+
+            case "📚 Yodlangan so'zlarim":
+            case "/mywords":
+            case "/lugat":
+                sendMyLearnedWords(chatId, profile);
                 break;
 
             default:
@@ -218,11 +365,52 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         UserProfile profile = userRepository.getOrCreate(chatId, firstName);
         answerCallback(callbackId);
 
+        String username = update.getCallbackQuery().getFrom().getUserName();
+        if (username != null && !username.isBlank()) {
+            profile.setUsername(username);
+        }
+        LocalDate today = LocalDate.now();
+        if (profile.getLastReminderDate() != null && profile.getLastReminderDate().equals(today)) {
+            profile.setEnteredAfterReminder(true);
+        }
+        profile.setLastActiveDate(today);
+        userRepository.save(profile);
+
+        // Til yoki Daraja tanlash callbacklari yangi va mavjud foydalanuvchilarni darhol faollashtiradi
         if (data.startsWith("set_lang_")) {
+            profile.setBotVersion(CURRENT_BOT_VERSION);
+            userRepository.save(profile);
             handleSetUserLanguage(chatId, profile, data, messageId);
+            return;
         } else if (data.startsWith("set_level_")) {
+            profile.setBotVersion(CURRENT_BOT_VERSION);
+            userRepository.save(profile);
             handleSetUserLevel(chatId, profile, data, messageId);
-        } else if (data.equals("lesson_start")) {
+            return;
+        }
+
+        // Majburiy /start callbacki
+        if (data.equals("force_restart_start")) {
+            profile.setBotVersion(CURRENT_BOT_VERSION);
+            userRepository.save(profile);
+            setupUserMenuButton(chatId);
+            if (profile.getTargetLanguage() == null) {
+                sendInitialLanguagePrompt(chatId, profile);
+            } else if (profile.getSelectedLevel() == null) {
+                sendInitialLevelPrompt(chatId, profile);
+            } else {
+                sendWelcomeMessage(chatId, profile);
+            }
+            return;
+        }
+
+        // Agar eski foydalanuvchi bo'lsa va bot yangilangan bo'lsa, /start bosish majburiy!
+        if (profile.getBotVersion() > 0 && profile.getBotVersion() < CURRENT_BOT_VERSION) {
+            sendUpdateMandatoryStartPrompt(chatId, profile);
+            return;
+        }
+
+        if (data.equals("lesson_start")) {
             sendDailyLesson(chatId, profile, true, messageId);
         } else if (data.startsWith("lesson_next")) {
             if (data.startsWith("lesson_next_")) {
@@ -327,6 +515,39 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             String wordText = data.replace("quiz_audio_next_", "");
             sendWordAudio(chatId, wordText);
             sendNewQuiz(chatId);
+        } else if (data.equals("bot_overall_stats")) {
+            sendOverallBotStats(chatId, profile);
+        } else if (data.equals("my_words_list")) {
+            sendMyLearnedWords(chatId, profile);
+        } else if (data.startsWith("dialog_topic_")) {
+            String topicId = data.replace("dialog_topic_", "");
+            com.mnemonic.model.DailyDialogue d = dialogueService.getDialogueById(topicId);
+            if (d != null) {
+                sendSpecificDialogue(chatId, profile, d);
+            }
+        } else if (data.equals("dialog_show")) {
+            sendDialogTopicPicker(chatId, profile);
+        } else if (data.startsWith("dialog_done_")) {
+            // Dialog tugadi, keyingi mavzu indeksini saqlash
+            String topicId = data.replace("dialog_done_", "");
+            profile.setCurrentDialogueId(topicId);
+            // currentDialogueTopicIndex ni oshirish (5 mavzu aylana)
+            int nextIdx = (profile.getCurrentDialogueTopicIndex() + 1) % 5;
+            profile.setCurrentDialogueTopicIndex(nextIdx);
+            userRepository.save(profile);
+            // Keyingi mavzu tanlovini ko'rsat
+            sendDialogTopicPicker(chatId, profile);
+        } else if (data.equals("retry_exercise_yes")) {
+            // 40% dan kam natija — foydalanuvchi qayta topshirishni xohladi
+            startDailyExercises(chatId, profile, false, 0);
+        } else if (data.equals("retry_exercise_no")) {
+            // 40% dan kam natija — foydalanuvchi keyingi darsga o'tishni xohladi
+            sendDialogTopicPicker(chatId, profile);
+        } else if (data.equals("btn_quick_restart")) {
+            profile.setBotVersion(CURRENT_BOT_VERSION);
+            userRepository.save(profile);
+            setupUserMenuButton(chatId);
+            sendWelcomeMessage(chatId, profile);
         }
     }
 
@@ -335,6 +556,16 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     // =========================================================================
     private void sendInitialLanguagePrompt(long chatId, UserProfile profile) {
         String name = profile.getFirstName() != null ? profile.getFirstName() : "Do'stim";
+
+        // Eski reply klaviaturani olib tashlash
+        try {
+            SendMessage clean = new SendMessage();
+            clean.setChatId(String.valueOf(chatId));
+            clean.setText("⚙️ <i>Tizim yangilandi...</i>");
+            clean.setParseMode("HTML");
+            clean.setReplyMarkup(new ReplyKeyboardRemove(true));
+            execute(clean);
+        } catch (Exception ignored) {}
 
         String text = "👋 <b>Assalomu alaykum, " + escapeHtml(name) + "!</b>\n\n" +
                 "🧠 <b>Mnemonika Ta'lim Botiga xush kelibsiz!</b>\n\n" +
@@ -449,19 +680,24 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         String successText = "🎉 <b>Ajoyib! Tilingiz va Darajangiz belgilandi:</b> " + lang.getDisplayName() + " (" + level.getDisplayName() + ")\n\n" +
                 "Endi har kuni sizga aynan <b>" + langFlag + " " + level.getDisplayName() + "</b> darajasidagi 20 ta yangi mnemonik so'z, audio talaffuzlar va mustahkamlovchi mashqlar beriladi.\n\n" +
-                "👇 O'rganishni boshlash uchun pastdagi menyudan kerakli bo'limni tanlang:";
+                "🎯 <b>Boshlash nuqtangiz:</b> " + profile.getCurrentDayIndex() + "-kun, <b>" + (profile.getCurrentWordInDay() + 1) + "-so'z</b>\n\n" +
+                "👇 To'liq darslarga kirish uchun pastdagi 'Super ilova' tugmasini bosing:";
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(successText);
         message.setParseMode("HTML");
-        message.setReplyMarkup(createMainMenuReplyKeyboard());
+        // Eski pastki klaviaturani olib tashlash
+        message.setReplyMarkup(new ReplyKeyboardRemove(true));
 
         try {
             execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+
+        setupUserMenuButton(chatId);
+        sendWebAppInlineLauncher(chatId, profile);
     }
 
     private void sendWelcomeMessage(long chatId, UserProfile profile) {
@@ -473,34 +709,71 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         String botTitle = (lang == TargetLanguage.RUSSIAN) ? "Rus Tili Mnemonika Boti" : "Ingliz Tili Mnemonika Boti";
 
         String welcomeText = "👋 <b>Assalomu alaykum, " + escapeHtml(name) + "!</b>\n\n" +
-                "🧠 <b>" + langFlag + " " + botTitle + "ga xush kelibsiz!</b>\n\n" +
-                "✨ <b>YANGILANISHLAR VA IMKONIYATLAR:</b>\n" +
-                "• 🌐 <b>Ikki Til Tizimi:</b> 🇬🇧 Ingliz va 🇷🇺 Rus tillarini o'rganish imkoniyati!\n" +
-                "• 🔊 <b>Haqiqiy Audio Talaffuz:</b> Har bir so'z va jonli dialogni sof diktor ovozida eshitish.\n" +
-                "• 🗣️ <b>Jonli Dialoglar:</b> Real hayotiy suhbatlar va replika audiolari.\n" +
-                "• 🧠 <b>4-Bosqichli Kreativ Metodika:</b> Fonetik ilmoq, kinematik tasavvur, kontekst va xotirani faollashtirish.\n\n" +
-                "━━━━━━━━━━━━━━━━━━━━━\n" +
-                "🌐 <b>Faol til:</b> " + lang.getDisplayName() + "\n" +
-                "🎯 <b>Tanlangan daraja:</b> " + levelName + "\n" +
-                "🔥 <b>Joriy Streak:</b> " + streak + " kun ketma-ket\n" +
-                "📚 <b>Bugungi Dars:</b> " + profile.getCurrentDayIndex() + "-kunlik to'plam (20 ta so'z)\n" +
-                "━━━━━━━━━━━━━━━━━━━━━\n\n" +
-                "👇 O'rganishni boshlash uchun quyidagi menyudan tanlang:";
+                "🧠 <b>" + langFlag + " " + botTitle + " (Versiya 4.0)</b>\n\n" +
+                "🎯 <b>DARSLARINGIZ QOLGAN JOYIDAN DAVOM ETADI:</b>\n" +
+                "• 📚 <b>Hozirgi Darsingiz:</b> " + profile.getCurrentDayIndex() + "-kun, <b>" + (profile.getCurrentWordInDay() + 1) + "-so'z</b>\n" +
+                "• 📝 <b>Yodlangan so'zlar:</b> " + profile.getTotalWordsLearned() + " ta\n" +
+                "• 🌐 <b>Faol til:</b> " + lang.getDisplayName() + "\n" +
+                "• 🎯 <b>Tanlangan daraja:</b> " + levelName + "\n" +
+                "• 🔥 <b>Joriy Streak:</b> " + streak + " kun\n\n" +
+                "💡 <i>Eski menyu olib tashlandi. Barcha darslar, real audio talaffuzlar, 3D kartochkalar va o'yinlar Super Ilovada ishlaydi!</i>\n\n" +
+                "👇 O'rganishni boshlash uchun quyidagi tugmani bosing:";
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(welcomeText);
         message.setParseMode("HTML");
-        message.setReplyMarkup(createMainMenuReplyKeyboard());
+        // Eski pastki klaviaturani butunlay olib tashlash
+        message.setReplyMarkup(new ReplyKeyboardRemove(true));
 
         try {
             execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+
+        setupUserMenuButton(chatId);
+        sendWebAppInlineLauncher(chatId, profile);
+    }
+
+    private void sendWebAppInlineLauncher(long chatId, UserProfile profile) {
+        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : DEFAULT_WEB_APP_URL;
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        List<InlineKeyboardButton> r1 = new ArrayList<>();
+        InlineKeyboardButton webBtn = new InlineKeyboardButton("🚀 Super Ilovani Ochish (Darslar & Audio)");
+        webBtn.setWebApp(new WebAppInfo(webUrl));
+        r1.add(webBtn);
+        rows.add(r1);
+
+        List<InlineKeyboardButton> r2 = new ArrayList<>();
+        InlineKeyboardButton langBtn = new InlineKeyboardButton("🌐 Tilni o'zgartirish");
+        langBtn.setCallbackData("change_language");
+        InlineKeyboardButton searchBtn = new InlineKeyboardButton("🔍 Qidiruv");
+        searchBtn.setCallbackData("open_search");
+        r2.add(langBtn);
+        r2.add(searchBtn);
+        rows.add(r2);
+
+        markup.setKeyboard(rows);
+
+        SendMessage send = new SendMessage();
+        send.setChatId(String.valueOf(chatId));
+        send.setText("👇 <b>Quyidagi tugma orqali darslarni boshlang:</b>");
+        send.setParseMode("HTML");
+        send.setReplyMarkup(markup);
+
+        try {
+            execute(send);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     private void sendWebAppInfoMessage(long chatId, UserProfile profile) {
+        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : DEFAULT_WEB_APP_URL;
         String text = "📱 <b>Mnemonic Learning System — Zamonaviy Next.js Web Ilova</b>\n\n" +
                 "✨ <b>Asosiy afzalliklari:</b>\n" +
                 "• 🎨 <b>Animatsion menyu va ultra-zamonaviy Dark UI:</b> Suzuvchi pastki dok, silliq o'tishlar va zamonaviy dizayn.\n" +
@@ -508,15 +781,13 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
                 "• 🌐 <b>Ingliz 🇬🇧 va Rus 🇷🇺 tillari:</b> Bitta bosishda til va darajani o'zgartirish.\n" +
                 "• 🗣️ <b>Jonli dialoglar va replika audio ijrosi:</b> Hayotiy suhbatlar (qahvaxona, IT-startap, ilmiy simpozium).\n" +
                 "• ⚡ <b>Speed Quiz:</b> 15 soniyalik dinamik taymer, ovoz effektlari va natijalar!\n\n" +
-                "🌐 <b>Brauzerda ochish manzili:</b>\n" +
-                "👉 <code>http://localhost:3000</code>\n\n" +
-                "<i>(Telegram Mini App sifatida ulash uchun domenni @BotFather orqali Menu Button ga biriktirish kifoya)</i>";
+                "👇 Quyidagi tugma orqali Super Ilovaga kiring:";
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> r1 = new ArrayList<>();
-        InlineKeyboardButton webBtn = new InlineKeyboardButton("🚀 Ilovani Brauzerda Ochish (localhost:3000)");
-        webBtn.setUrl("http://localhost:3000");
+        InlineKeyboardButton webBtn = new InlineKeyboardButton("🚀 Super Ilovani Ochish");
+        webBtn.setWebApp(new WebAppInfo(webUrl));
         r1.add(webBtn);
         rows.add(r1);
         markup.setKeyboard(rows);
@@ -529,6 +800,122 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
         try {
             execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendUpdateMandatoryStartPrompt(long chatId, UserProfile profile) {
+        String name = profile.getFirstName() != null ? profile.getFirstName() : "Foydalanuvchi";
+
+        // 1. Eski pastki menyuni barcha foydalanuvchilar ekranidan majburiy o'chirish
+        try {
+            SendMessage removeKeyboard = new SendMessage();
+            removeKeyboard.setChatId(String.valueOf(chatId));
+            removeKeyboard.setText("🔄 <i>Eski menyu olib tashlandi, tizim yangilandi...</i>");
+            removeKeyboard.setParseMode("HTML");
+            removeKeyboard.setReplyMarkup(new ReplyKeyboardRemove(true));
+            execute(removeKeyboard);
+        } catch (Exception ignored) {}
+
+        String msg = "🚀 <b>DIQQAT! Botimiz Yangilandi (Versiya 4.0)!</b>\n\n" +
+                "Hurmatli <b>" + escapeHtml(name) + "</b>, tizimimizga yangi imkoniyatlar qo'shildi:\n\n" +
+                "• ⚡ <b>Super Menyu & Toza Ekran:</b> Eski pastki menyu olib tashlandi, endi butun tizim Super Ilovada to'liq ovoz bilan ishlaydi!\n" +
+                "• 🎯 <b>Aniqlashtirilgan Mashqlar va Viktorina:</b> Rus va Ingliz tili so'zlarining o'zbekcha tarjimasi aniq va to'g'ri taqsimlandi.\n" +
+                "• 🔍 <b>Tezkor Mnemotexnik Qidiruv:</b> 0ms tezlikda lug'at va audio.\n\n" +
+                "🛡️ <b>Xavotir olmang:</b> Siz to'plagan barcha ballar, o'rganilgan so'zlar va darsingiz qolgan joyi (Kun: " + profile.getCurrentDayIndex() + ", So'z: " + (profile.getCurrentWordInDay() + 1) + ") aynan o'z holicha saqlanadi!\n\n" +
+                "⚠️ <b>Yangi tizimni faollashtirish uchun /start bosish majburiydir.</b>\n" +
+                "👇 Iltimos, pastdagi tugmani bosing:";
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> r1 = new ArrayList<>();
+        InlineKeyboardButton startBtn = new InlineKeyboardButton("🔄 Yangilanishni qabul qilish & Boshlash (/start) 🚀");
+        startBtn.setCallbackData("force_restart_start");
+        r1.add(startBtn);
+        rows.add(r1);
+        markup.setKeyboard(rows);
+
+        SendMessage send = new SendMessage();
+        send.setChatId(String.valueOf(chatId));
+        send.setText(msg);
+        send.setParseMode("HTML");
+        send.setReplyMarkup(markup);
+
+        try {
+            execute(send);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendGamesInfoMessage(long chatId, UserProfile profile) {
+        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : DEFAULT_WEB_APP_URL;
+        String text = "🎮 <b>Xotira O'yinlari & 3D Kartochkalar (Memory Games Hub)</b>\n\n" +
+                "Mnemotexnik assotsiatsiyalarni mustahkamlash uchun 4 ta ajoyib o'yin:\n\n" +
+                "1. 🎴 <b>3D Flashcard Studio:</b> Kartalarni 3D aylantiring, audio talaffuzini eshiting va 'Bilar edim / Qayta takrorlash' orqali mustahkamlang!\n" +
+                "2. 🧠 <b>Xotira Juftliklari (Memory Match):</b> Yuzasi yopiq kartalarni ochib, so'z va uning mnemonik ma'nosini juftlashtiring!\n" +
+                "3. 🧩 <b>Harflardan So'z Yasash (Word Scramble):</b> Mnemonik ilmoqqa qarab, aralashgan harflardan so'zni to'g'ri tering!\n" +
+                "4. 📐 <b>Grammatika Saralash (Grammar Sort):</b> Rus tilida Rodlar/Kelishiklar, Ingliz tilida Artikllar/Predloglarni to'g'ri savatlarga joylang!\n\n" +
+                "🚀 O'yinlarni Super Ilovada to'liq ovoz va animatsiyalar bilan o'ynang:";
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> r1 = new ArrayList<>();
+        InlineKeyboardButton btn = new InlineKeyboardButton("🎮 O'yinlar Markazini Ochish");
+        btn.setWebApp(new WebAppInfo(webUrl));
+        r1.add(btn);
+        rows.add(r1);
+        markup.setKeyboard(rows);
+
+        SendMessage msg = new SendMessage();
+        msg.setChatId(String.valueOf(chatId));
+        msg.setText(text);
+        msg.setParseMode("HTML");
+        msg.setReplyMarkup(markup);
+
+        try {
+            execute(msg);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendGrammarInfoMessage(long chatId, UserProfile profile) {
+        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : DEFAULT_WEB_APP_URL;
+        TargetLanguage lang = (profile.getTargetLanguage() != null) ? profile.getTargetLanguage() : TargetLanguage.ENGLISH;
+        String langTitle = (lang == TargetLanguage.RUSSIAN) ? "🇷🇺 Rus Tili Grammatikasi" : "🇬🇧 Ingliz Tili Grammatikasi";
+
+        String text = "📖 <b>" + langTitle + " (Mnemonik Qoidalar)</b>\n\n" +
+                "Zerikarli darsliklar o'rniga eslab qolish juda oson bo'lgan mnemonik qoidalar:\n\n" +
+                (lang == TargetLanguage.RUSSIAN
+                        ? "• 👥 <b>Otlar Rodi:</b> Oxirgi harflar siri (Undosh = М, А/Я = Ж, О/Е = С) va istisnolar.\n" +
+                          "• 🎯 <b>6 ta Kelishik (Падежи):</b> Mashhur mnemonik she'r: <i>'Иван Родил Девчонку, Велел Тащить Пелёнку'</i>.\n" +
+                          "• 🔄 <b>Predloglar juftligi:</b> <i>'В' ga borgan 'ИЗ' dan, 'НА' ga borgan 'С' dan qaytadi!</i>\n" +
+                          "• 🎬 <b>Fe'l Vidlari (СВ vs НСВ):</b> Jarayon kinofilmi vs Natija fotosurati.\n"
+                        : "• ⏱️ <b>Present Simple vs Continuous:</b> Fotosurat (har doim) vs Jonli video (aynan hozir).\n" +
+                          "• 🎪 <b>Artikllar (A, An vs THE):</b> Begona tanishuv vs Qadrdon, aniq buyum.\n" +
+                          "• 🔺 <b>Vaqt & Joy Predloglari (IN, ON, AT):</b> Kengdan torga teskari piramida siri.\n" +
+                          "• ⚡ <b>Modal Fe'llar (Can, Must, Should):</b> Qodirlik, qat'iy qoida va do'stona maslahat.\n") +
+                "\n💡 Har bir mavzu audio misollar va mini-test bilan ta'minlangan!";
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> r1 = new ArrayList<>();
+        InlineKeyboardButton btn = new InlineKeyboardButton("📖 Grammatika Bo'limiga O'tish");
+        btn.setWebApp(new WebAppInfo(webUrl));
+        r1.add(btn);
+        rows.add(r1);
+        markup.setKeyboard(rows);
+
+        SendMessage msg = new SendMessage();
+        msg.setChatId(String.valueOf(chatId));
+        msg.setText(text);
+        msg.setParseMode("HTML");
+        msg.setReplyMarkup(markup);
+
+        try {
+            execute(msg);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
@@ -631,7 +1018,7 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
         List<InlineKeyboardButton> row0 = new ArrayList<>();
-        InlineKeyboardButton dialogBtn = new InlineKeyboardButton("🗣️ 20 ta so'zdan tuzilgan Dialog & Audio");
+        InlineKeyboardButton dialogBtn = new InlineKeyboardButton("🗣️ 5 ta Dialog Mavzusini Ko'rish");
         dialogBtn.setCallbackData("dialog_show");
         row0.add(dialogBtn);
         rows.add(row0);
@@ -707,6 +1094,37 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
                 resSb.append("👍 <i>Yaxshi natija! Xato qilgan so'zlaringizni dars bo'limida yana bir bor ko'rib chiqing.</i>");
             } else {
                 resSb.append("💪 <i>Harakatingiz tahsinga loyiq! '📅 Kunlik 20 ta so'z' bo'limi orqali qayta takrorlang.</i>");
+            }
+
+            // ---- 40% dan kam bo'lsa retry so'rovi ----
+            if (percent < 40) {
+                resSb.append("\n\n⚠️ <b>Natija 40% dan past!</b> Bu so'zlarni yana bir bor takrorlashingizni tavsiya qilamiz.\n");
+                resSb.append("💭 <i>Testni qayta topshirasizmi?</i>");
+
+                InlineKeyboardMarkup retryMarkup = new InlineKeyboardMarkup();
+                List<List<InlineKeyboardButton>> retryRows = new ArrayList<>();
+
+                List<InlineKeyboardButton> retryRow1 = new ArrayList<>();
+                InlineKeyboardButton yesBtn = new InlineKeyboardButton("✅ Ha, qayta topshiraman");
+                yesBtn.setCallbackData("retry_exercise_yes");
+                InlineKeyboardButton noBtn = new InlineKeyboardButton("❌ Yo'q, keyingi darsga o'taman");
+                noBtn.setCallbackData("retry_exercise_no");
+                retryRow1.add(yesBtn);
+                retryRow1.add(noBtn);
+                retryRows.add(retryRow1);
+                retryMarkup.setKeyboard(retryRows);
+
+                SendMessage retryMsg = new SendMessage();
+                retryMsg.setChatId(String.valueOf(chatId));
+                retryMsg.setText(resSb.toString());
+                retryMsg.setParseMode("HTML");
+                retryMsg.setReplyMarkup(retryMarkup);
+                try {
+                    execute(retryMsg);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                return;
             }
 
             InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
@@ -870,8 +1288,18 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         InlineKeyboardButton exBtn = new InlineKeyboardButton("📝 Mashqlar");
         exBtn.setCallbackData("exercise_start");
         row1.add(exBtn);
-
         rows.add(row1);
+
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        InlineKeyboardButton myWordsBtn = new InlineKeyboardButton("📚 Yodlangan so'zlarim");
+        myWordsBtn.setCallbackData("my_words_list");
+        row2.add(myWordsBtn);
+
+        InlineKeyboardButton statsBtn = new InlineKeyboardButton("📊 Bot statistikasi");
+        statsBtn.setCallbackData("bot_overall_stats");
+        row2.add(statsBtn);
+        rows.add(row2);
+
         markup.setKeyboard(rows);
         message.setReplyMarkup(markup);
 
@@ -880,6 +1308,161 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+    }
+
+    private void sendOverallBotStats(long chatId, UserProfile profile) {
+        int totalUsers = userRepository.getTotalUsersCount();
+        LocalDate today = LocalDate.now();
+        int activeToday = userRepository.getActiveTodayCount(today);
+        List<UserProfile> all = userRepository.getAllProfiles();
+
+        long enteredAfterCount = all.stream().filter(UserProfile::isEnteredAfterReminder).count();
+        long ruUsers = all.stream().filter(u -> u.getTargetLanguage() == TargetLanguage.RUSSIAN).count();
+        long enUsers = all.stream().filter(u -> u.getTargetLanguage() == TargetLanguage.ENGLISH).count();
+        int totalWordsLearnedByAll = all.stream().mapToInt(UserProfile::getTotalWordsLearned).sum();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("📊 <b>MNEMONIC BOT UMUMIY STATISTIKASI:</b>\n\n");
+        sb.append("👥 <b>Jami Foydalanuvchilar (Total Users):</b> <code>").append(totalUsers).append(" ta</code>\n");
+        sb.append("🟢 <b>Bugun Faol (Daily Active Users):</b> <code>").append(activeToday).append(" ta</code>\n");
+        sb.append("🟣 <b>Eslatmadan so'ng kirganlar:</b> <code>").append(enteredAfterCount).append(" ta</code>\n\n");
+        sb.append("🌐 <b>O'rganilayotgan tillar:</b>\n");
+        sb.append("• 🇷🇺 Rus tili: <b>").append(ruUsers).append(" ta</b> foydalanuvchi\n");
+        sb.append("• 🇬🇧 Ingliz tili: <b>").append(enUsers).append(" ta</b> foydalanuvchi\n\n");
+        sb.append("📚 <b>Jami barcha o'zlashtirilgan so'zlar:</b> <b>").append(totalWordsLearnedByAll).append(" ta</b>\n");
+        sb.append("⚡ <i>Barcha hisoblagichlar real-time bazadan avtomatik hisoblanmoqda.</i>");
+
+        SendMessage msg = new SendMessage();
+        msg.setChatId(String.valueOf(chatId));
+        msg.setText(sb.toString());
+        msg.setParseMode("HTML");
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> r1 = new ArrayList<>();
+        InlineKeyboardButton refreshBtn = new InlineKeyboardButton("🔄 Yangilash");
+        refreshBtn.setCallbackData("bot_overall_stats");
+        r1.add(refreshBtn);
+        rows.add(r1);
+        markup.setKeyboard(rows);
+        msg.setReplyMarkup(markup);
+
+        try {
+            execute(msg);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendMyLearnedWords(long chatId, UserProfile profile) {
+        TargetLanguage lang = profile.getTargetLanguage() != null ? profile.getTargetLanguage() : TargetLanguage.ENGLISH;
+        String langTitle = (lang == TargetLanguage.RUSSIAN) ? "🇷🇺 Rus Tili" : "🇬🇧 Ingliz Tili";
+
+        List<Word> allLevelWords = wordRepository.getWordsByLevel(
+                profile.getSelectedLevel() != null ? profile.getSelectedLevel() : WordLevel.BEGINNER,
+                lang
+        );
+        int wordsLearned = Math.min(profile.getTotalWordsLearned(), allLevelWords.size());
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("📚 <b>SIZNING YODLANGAN SO'ZLARINGIZ:</b>\n\n");
+        sb.append("🌐 <b>Til bo'limi:</b> ").append(langTitle).append("\n");
+        sb.append("📊 <b>Jami o'rganilgan so'zlar soni:</b> <b>").append(profile.getTotalWordsLearned()).append(" ta</b>\n\n");
+
+        if (profile.getTotalWordsLearned() == 0 || allLevelWords.isEmpty()) {
+            sb.append("💡 <i>Hali birorta so'z o'rganilmadi. '📅 Kunlik 20 ta so'z' tugmasi orqali ilk darsingizni boshlang!</i>");
+        } else {
+            sb.append("📝 <b>O'zlashtirilgan so'zlar ro'yxati:</b>\n");
+            int limit = Math.min(wordsLearned > 0 ? wordsLearned : 10, allLevelWords.size());
+            for (int i = 0; i < limit; i++) {
+                Word w = allLevelWords.get(i);
+                sb.append(i + 1).append(". <b>").append(w.getEnglishWord()).append("</b> ")
+                  .append(w.getPronunciation() != null ? w.getPronunciation() : "").append(" — <i>").append(w.getUzbekMeaning()).append("</i>\n")
+                  .append("   🔗 «").append(w.getMnemonicHook()).append("»\n");
+            }
+            if (profile.getTotalWordsLearned() > limit) {
+                sb.append("\n✨ <i>... va yana ").append(profile.getTotalWordsLearned() - limit).append(" ta so'z Super Ilovada to'liq audio bilan mavjud!</i>");
+            }
+        }
+
+        SendMessage msg = new SendMessage();
+        msg.setChatId(String.valueOf(chatId));
+        msg.setText(sb.toString());
+        msg.setParseMode("HTML");
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> r1 = new ArrayList<>();
+        InlineKeyboardButton lessonBtn = new InlineKeyboardButton("📅 Yangi darsni boshlash");
+        lessonBtn.setCallbackData("lesson_start");
+        r1.add(lessonBtn);
+        rows.add(r1);
+        markup.setKeyboard(rows);
+        msg.setReplyMarkup(markup);
+
+        try {
+            execute(msg);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendBroadcastToAllUsers(long adminChatId, UserProfile profile, String fullText) {
+        if (adminChatId != 5787141744L) {
+            sendMessage(adminChatId, "❌ Bu buyruq faqat bot adminlari uchun ochiq.");
+            return;
+        }
+
+        String customMsg = null;
+        if (fullText.contains(" ")) {
+            customMsg = fullText.substring(fullText.indexOf(" ") + 1).trim();
+        }
+
+        String broadcastMsg = (customMsg != null && !customMsg.isEmpty())
+                ? customMsg
+                : "🔔 <b>MUHIM XABARNOMA: Bot Yangilandi! 🚀</b>\n\n" +
+                  "Hurmatli foydalanuvchi! Botimizga katta yangilanishlar kiritildi:\n\n" +
+                  "✨ <b>Yangi Imkoniyatlar:</b>\n" +
+                  "• 🗣️ <b>5 ta yangi hayotiy dialog</b> (Taksi, Sayohat, Bozor, Kafe, Dorixona + Combo)\n" +
+                  "• 🎴 <b>Quizlet uslubidagi 3D Flashkarta</b> studiyasi\n" +
+                  "• 📚 <b>Rus va Ingliz tili lug'atlari</b> mutlaqo alohida ajratildi (/mywords)\n" +
+                  "• ⚡ Tezkor audio va yangi xotira o'yinlari\n\n" +
+                  "⚠️ <b>DIQQAT: Yangi funksiyalar to'g'ri ishlashi uchun barcha foydalanuvchilar botni qayta ishga tushirishi (/start bosishi) shart!</b>\n\n" +
+                  "👇 <i>Quyidagi tugmani bosing va botni yangilang:</i>";
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> r1 = new ArrayList<>();
+        InlineKeyboardButton b1 = new InlineKeyboardButton("🚀 /start Bosish va Yangilash");
+        b1.setCallbackData("btn_quick_restart");
+        r1.add(b1);
+        rows.add(r1);
+        markup.setKeyboard(rows);
+
+        List<UserProfile> allUsers = userRepository.getAllProfiles();
+        int sent = 0;
+        int failed = 0;
+
+        for (UserProfile u : allUsers) {
+            try {
+                SendMessage sm = new SendMessage();
+                sm.setChatId(String.valueOf(u.getChatId()));
+                sm.setText(broadcastMsg);
+                sm.setParseMode("HTML");
+                sm.setReplyMarkup(markup);
+                execute(sm);
+                sent++;
+                Thread.sleep(40); // 25 msg/sec
+            } catch (Exception e) {
+                failed++;
+            }
+        }
+
+        String report = "✅ <b>Ommaviy xabarnoma yakunlandi!</b>\n\n" +
+                "• Jami: " + allUsers.size() + " ta\n" +
+                "• Yetkazildi: " + sent + " ta\n" +
+                "• Xato/Bloklagan: " + failed + " ta";
+        sendMessage(adminChatId, report);
     }
 
     // =========================================================================
@@ -997,6 +1580,47 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         row1.add(quizBtn);
 
         rows.add(row1);
+        markup.setKeyboard(rows);
+        message.setReplyMarkup(markup);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendSearchPromptWithButtons(long chatId, UserProfile profile) {
+        String langName = (profile.getTargetLanguage() == TargetLanguage.RUSSIAN) ? "ruscha" : "inglizcha";
+        String langFlag = (profile.getTargetLanguage() == TargetLanguage.RUSSIAN) ? "🇷🇺" : "🇬🇧";
+        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : DEFAULT_WEB_APP_URL;
+
+        String text = "🔍 <b>MNEMOTEXNIK SO'Z QIDIRUVI (" + langFlag + " " + langName.toUpperCase() + "):</b>\n\n" +
+                "Istalgan " + langName + " yoki o'zbekcha so'zni yozib yuboring (masalan: <i>" +
+                (profile.getTargetLanguage() == TargetLanguage.RUSSIAN ? "спасибо, улыбка, такси" : "abandon, curious, taxi") + "</i>).\n\n" +
+                "Bot uning mnemonik assotsiatsiyasini topib beradi va audio talaffuzini eshittiradi!\n\n" +
+                "Yoki Super Ilovadagi chaqmoqdek tez qidiruvdan foydalaning 👇";
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(text);
+        message.setParseMode("HTML");
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        InlineKeyboardButton webBtn = new InlineKeyboardButton("🚀 Super Ilovada Qidirish (0ms)");
+        webBtn.setWebApp(new WebAppInfo(webUrl));
+        row1.add(webBtn);
+        rows.add(row1);
+
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        InlineKeyboardButton b1 = new InlineKeyboardButton("🎲 Tasodifiy so'z");
+        b1.setCallbackData("random_word");
+        row2.add(b1);
+        rows.add(row2);
+
         markup.setKeyboard(rows);
         message.setReplyMarkup(markup);
 
@@ -1282,12 +1906,82 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     // =========================================================================
     // 🗣️ KUNLIK DIALOG & SPEAKING PRACTICE (AUDIO BILAN)
     // =========================================================================
+
+    /**
+     * Asosiy menyudan "Dialog" bosilganda: 5 ta mavzu tugmalarini ko'rsatadi.
+     * Foydalanuvchi oxirgi ko'rgan mavzu indeksidan keyingisi avtomatik ta'kidlanadi.
+     */
     private void sendDailyDialogue(long chatId, UserProfile profile) {
-        com.mnemonic.model.DailyDialogue dialogue = dialogueService.getDialogueForProfile(profile);
-        if (dialogue == null) {
-            sendMessage(chatId, "Hozircha dialog mavjud emas.");
-            return;
+        sendDialogTopicPicker(chatId, profile);
+    }
+
+    private void sendDialogTopicPicker(long chatId, UserProfile profile) {
+        TargetLanguage lang = profile.getTargetLanguage() != null ? profile.getTargetLanguage() : TargetLanguage.ENGLISH;
+        boolean isRu = (lang == TargetLanguage.RUSSIAN);
+        String pfx = isRu ? "ru_daily_" : "en_daily_";
+        String langTitle = isRu ? "🇷🇺 Rus tili Dialoglari" : "🇬🇧 Ingliz tili Dialoglari";
+        int lastIdx = profile.getCurrentDialogueTopicIndex();
+
+        // Mavzu nomlari (ikkala tilda bir xil emoji)
+        String[][] topics = {
+            {"taxi",    "🚕 Taksi"},
+            {"travel",  "✈️ Sayohat / Aeroport"},
+            {"market",  "🛒 Bozor / Do'kon"},
+            {"cafe",    "☕ Kafe / Buyurtma"},
+            {"pharmacy","💊 Dorixona"},
+        };
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<b>").append(langTitle).append("</b>\n\n");
+        sb.append("📌 <b>O'zingizni qiziqtirgan mavzuni tanlang:</b>\n");
+        sb.append("<i>(Belgilangan mavzu — oxirgi ko'rganingiz)</i>\n\n");
+        for (int i = 0; i < topics.length; i++) {
+            String marker = (i == lastIdx) ? "✅ " : "  ";
+            sb.append(marker).append(topics[i][1]).append("\n");
         }
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(sb.toString());
+        message.setParseMode("HTML");
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            String topicKey = topics[i][0];
+            String label = (i == lastIdx ? "✅ " : "") + topics[i][1];
+            InlineKeyboardButton btn = new InlineKeyboardButton(label);
+            btn.setCallbackData("dialog_topic_" + pfx + topicKey);
+            row1.add(btn);
+        }
+        rows.add(row1);
+
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        for (int i = 3; i < 5; i++) {
+            String topicKey = topics[i][0];
+            String label = (i == lastIdx ? "✅ " : "") + topics[i][1];
+            InlineKeyboardButton btn = new InlineKeyboardButton(label);
+            btn.setCallbackData("dialog_topic_" + pfx + topicKey);
+            row2.add(btn);
+        }
+        rows.add(row2);
+
+        markup.setKeyboard(rows);
+        message.setReplyMarkup(markup);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendSpecificDialogue(long chatId, UserProfile profile, com.mnemonic.model.DailyDialogue dialogue) {
+        // Dialog progress ni saqlash
+        profile.setCurrentDialogueId(dialogue.getId());
+        userRepository.save(profile);
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
@@ -1297,21 +1991,46 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        // Audio tugmasi
+        List<InlineKeyboardButton> row0 = new ArrayList<>();
         InlineKeyboardButton audioBtn = new InlineKeyboardButton("🎧 Butun dialogni tinglash (Audio)");
         audioBtn.setCallbackData("dialog_audio_" + dialogue.getId());
-        row1.add(audioBtn);
-        rows.add(row1);
+        row0.add(audioBtn);
+        rows.add(row0);
 
-        List<InlineKeyboardButton> row2 = new ArrayList<>();
-        InlineKeyboardButton exBtn = new InlineKeyboardButton("📝 Mashqlarni yechish");
-        exBtn.setCallbackData("exercise_start");
-        row2.add(exBtn);
+        // "Dialog tugadi, keyingiga o'tish" tugmasi
+        List<InlineKeyboardButton> doneRow = new ArrayList<>();
+        InlineKeyboardButton doneBtn = new InlineKeyboardButton("✅ O'qib bo'ldim — Boshqa mavzu");
+        doneBtn.setCallbackData("dialog_done_" + dialogue.getId());
+        doneRow.add(doneBtn);
+        rows.add(doneRow);
 
-        InlineKeyboardButton lessonBtn = new InlineKeyboardButton("📅 20 ta so'z");
-        lessonBtn.setCallbackData("lesson_start");
-        row2.add(lessonBtn);
-        rows.add(row2);
+        TargetLanguage lang = profile.getTargetLanguage() != null ? profile.getTargetLanguage() : TargetLanguage.ENGLISH;
+        String pfx = (lang == TargetLanguage.RUSSIAN) ? "ru_daily_" : "en_daily_";
+
+        List<InlineKeyboardButton> topicRow1 = new ArrayList<>();
+        InlineKeyboardButton t1 = new InlineKeyboardButton("🚕 Taksi");
+        t1.setCallbackData("dialog_topic_" + pfx + "taxi");
+        InlineKeyboardButton t2 = new InlineKeyboardButton("✈️ Sayohat");
+        t2.setCallbackData("dialog_topic_" + pfx + "travel");
+        InlineKeyboardButton t3 = new InlineKeyboardButton("🛒 Bozor");
+        t3.setCallbackData("dialog_topic_" + pfx + "market");
+        topicRow1.add(t1);
+        topicRow1.add(t2);
+        topicRow1.add(t3);
+        rows.add(topicRow1);
+
+        List<InlineKeyboardButton> topicRow2 = new ArrayList<>();
+        InlineKeyboardButton t4 = new InlineKeyboardButton("☕ Kafe");
+        t4.setCallbackData("dialog_topic_" + pfx + "cafe");
+        InlineKeyboardButton t5 = new InlineKeyboardButton("💊 Dorixona");
+        t5.setCallbackData("dialog_topic_" + pfx + "pharmacy");
+        InlineKeyboardButton t6 = new InlineKeyboardButton("🌟 Combo");
+        t6.setCallbackData("dialog_topic_" + pfx + "combo");
+        topicRow2.add(t4);
+        topicRow2.add(t5);
+        topicRow2.add(t6);
+        rows.add(topicRow2);
 
         markup.setKeyboard(rows);
         message.setReplyMarkup(markup);
@@ -1397,43 +2116,17 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         List<KeyboardRow> keyboard = new ArrayList<>();
 
         KeyboardRow row1 = new KeyboardRow();
-        row1.add(new KeyboardButton("📅 Kunlik 20 ta so'z"));
-        row1.add(new KeyboardButton("📝 Kunlik Mashqlar"));
+        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : DEFAULT_WEB_APP_URL;
+        KeyboardButton superBtn = new KeyboardButton("🚀 Super ilova (Ovoz, O'yinlar, Darslar)");
+        superBtn.setWebApp(new WebAppInfo(webUrl));
+        row1.add(superBtn);
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton("🗣️ Kunlik Dialog"));
-        row2.add(new KeyboardButton("🔥 Streak & Natijalarim"));
-
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add(new KeyboardButton("🌐 Tilni o'zgartirish"));
-        row3.add(new KeyboardButton("🎯 Darajani o'zgartirish"));
-
-        KeyboardRow row4 = new KeyboardRow();
-        row4.add(new KeyboardButton("🎲 Tasodifiy so'z"));
-        row4.add(new KeyboardButton("📚 Darajalar"));
-
-        KeyboardRow row5 = new KeyboardRow();
-        row5.add(new KeyboardButton("🎮 Tezkor Test"));
-        row5.add(new KeyboardButton("🔍 Qidiruv"));
-
-        KeyboardRow row6 = new KeyboardRow();
-        row6.add(new KeyboardButton("⏰ Eslatma sozlamalari"));
-        row6.add(new KeyboardButton("💡 Mnemonika nima?"));
-
-        KeyboardRow row7 = new KeyboardRow();
-        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : DEFAULT_WEB_APP_URL;
-        KeyboardButton superBtn = new KeyboardButton("🚀 Super ilova");
-        superBtn.setWebApp(new WebAppInfo(webUrl));
-        row7.add(superBtn);
-        row7.add(new KeyboardButton("📱 Web Ilova (Next.js Mini App)"));
+        row2.add(new KeyboardButton("🔍 Qidiruv"));
+        row2.add(new KeyboardButton("🌐 Tilni o'zgartirish"));
 
         keyboard.add(row1);
         keyboard.add(row2);
-        keyboard.add(row3);
-        keyboard.add(row4);
-        keyboard.add(row5);
-        keyboard.add(row6);
-        keyboard.add(row7);
 
         keyboardMarkup.setKeyboard(keyboard);
         return keyboardMarkup;

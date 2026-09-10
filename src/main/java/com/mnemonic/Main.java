@@ -25,6 +25,7 @@ public class Main {
             TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
             EnglishMnemonicBot bot = new EnglishMnemonicBot(botUsername, botToken);
             botsApi.registerBot(bot);
+            bot.cleanupOldKeyboardForAllUsers();
 
             // Avtomatik kunlik eslatma (Reminder Scheduler) servisini ulash
             ReminderSchedulerService reminderService = new ReminderSchedulerService(

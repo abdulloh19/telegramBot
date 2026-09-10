@@ -57,7 +57,24 @@ public class ReminderSchedulerService {
                 continue;
             }
 
-            // Foydalanuvchi belgilagan soat kelganmi?
+            // 1. 3 kun va undan ortiq kirmagan foydalanuvchilarga "Sizni sog'indik" engagement xabari
+            LocalDate lastActive = profile.getLastActiveDate();
+            if (lastActive != null) {
+                long daysAbsent = java.time.temporal.ChronoUnit.DAYS.between(lastActive, today);
+                if (daysAbsent >= 3) {
+                    LocalDate lastSent = lastReminderSentDate.get(profile.getChatId());
+                    if (lastSent == null || !lastSent.equals(today)) {
+                        sendWeMissYouMessage(profile, daysAbsent);
+                        lastReminderSentDate.put(profile.getChatId(), today);
+                        profile.setLastReminderDate(today);
+                        profile.setEnteredAfterReminder(false);
+                        userRepository.save(profile);
+                    }
+                    continue;
+                }
+            }
+
+            // 2. Kunlik majburiy eslatma (har kuni foydalanuvchini botga kirishga undash uchun)
             if (profile.getReminderHour() == currentHour) {
                 // Bugun hali eslatma yuborilmaganmi?
                 LocalDate lastSent = lastReminderSentDate.get(profile.getChatId());
@@ -72,7 +89,45 @@ public class ReminderSchedulerService {
 
                 sendReminderMessage(profile);
                 lastReminderSentDate.put(profile.getChatId(), today);
+                profile.setLastReminderDate(today);
+                profile.setEnteredAfterReminder(false);
+                userRepository.save(profile);
             }
+        }
+    }
+
+    private void sendWeMissYouMessage(UserProfile profile, long daysAbsent) {
+        String weMissYouText = creativeContentService.buildWeMissYouReminder(profile, daysAbsent);
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(profile.getChatId()));
+        message.setText(weMissYouText);
+        message.setParseMode("HTML");
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        InlineKeyboardButton lessonBtn = new InlineKeyboardButton("🚀 Darsga qaytish & Streakni saqlash!");
+        lessonBtn.setCallbackData("lesson_start");
+        row1.add(lessonBtn);
+        rows.add(row1);
+
+        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : "https://pubs-cultures-salvador-specialties.trycloudflare.com";
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        InlineKeyboardButton webBtn = new InlineKeyboardButton("📱 Super Ilovada Darsni Ochish");
+        webBtn.setWebApp(new org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo(webUrl));
+        row2.add(webBtn);
+        rows.add(row2);
+
+        markup.setKeyboard(rows);
+        message.setReplyMarkup(markup);
+
+        try {
+            messageSender.accept(message);
+            System.out.println("💌 'Sizni sog'indik' (3+ kun kirmagan) xabari yuborildi: @" + profile.getFirstName() + " (" + profile.getChatId() + ")");
+        } catch (Exception e) {
+            System.err.println("❌ 'Sizni sog'indik' xabarini yuborishda xatolik (" + profile.getChatId() + "): " + e.getMessage());
         }
     }
 

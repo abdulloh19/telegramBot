@@ -29,6 +29,21 @@ public class UserProfile {
     private boolean reminderEnabled = true;
     private int reminderHour = 20; // Default: 20:00
 
+    private int botVersion = 0; // Tizim yangilanganda /start majburiyligini tekshirish
+
+    private String username; // Telegram @username
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private LocalDate lastReminderDate; // Oxirgi eslatma yuborilgan sana
+
+    private boolean enteredAfterReminder = false; // Eslatmadan so'ng kirganmi?
+    private String lastName; // Telegram familiyasi
+    private String phoneNumber; // Telefon raqami
+
+    // Dialog progress — foydalanuvchi oxirgi ko'rgan dialog ID va mavzu indeksi
+    private String currentDialogueId = null;    // Masalan: "en_daily_taxi"
+    private int currentDialogueTopicIndex = 0;  // 0-4 oralig'ida (5 ta mavzu)
+
     public UserProfile() {
     }
 
@@ -179,5 +194,69 @@ public class UserProfile {
 
     public void setReminderHour(int reminderHour) {
         this.reminderHour = reminderHour;
+    }
+
+    public int getBotVersion() {
+        return botVersion;
+    }
+
+    public void setBotVersion(int botVersion) {
+        this.botVersion = botVersion;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public LocalDate getLastReminderDate() {
+        return lastReminderDate;
+    }
+
+    public void setLastReminderDate(LocalDate lastReminderDate) {
+        this.lastReminderDate = lastReminderDate;
+    }
+
+    public boolean isEnteredAfterReminder() {
+        return enteredAfterReminder;
+    }
+
+    public void setEnteredAfterReminder(boolean enteredAfterReminder) {
+        this.enteredAfterReminder = enteredAfterReminder;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getCurrentDialogueId() {
+        return currentDialogueId;
+    }
+
+    public void setCurrentDialogueId(String currentDialogueId) {
+        this.currentDialogueId = currentDialogueId;
+    }
+
+    public int getCurrentDialogueTopicIndex() {
+        return currentDialogueTopicIndex;
+    }
+
+    public void setCurrentDialogueTopicIndex(int currentDialogueTopicIndex) {
+        this.currentDialogueTopicIndex = currentDialogueTopicIndex;
     }
 }
