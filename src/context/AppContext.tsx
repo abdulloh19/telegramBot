@@ -58,13 +58,24 @@ const defaultStats: UserStats = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// Boshlang'ich holatda: 15 ta Rus tili va 10 ta Ingliz tili o'zlashtirilgan so'zlari
+const DEFAULT_COMPLETED_WORD_IDS = [
+  // 15 ta Rus tili
+  'ru_spasibo', 'ru_vdrug', 'ru_mechta', 'ru_pobeda', 'ru_pogoda',
+  'ru_ostorojno', 'ru_ulibka', 'ru_drujba', 'ru_pomosh', 'ru_skazka',
+  'ru_vremya', 'ru_nadejda', 'ru_schaste', 'ru_puteshestvie', 'ru_vnimanie',
+  // 10 ta Ingliz tili
+  'en_abandon', 'en_curious', 'en_drowsy', 'en_hesitate', 'en_fragile',
+  'en_novice', 'en_quench', 'en_obstacle', 'en_marvellous', 'en_candid'
+];
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [targetLanguage, setTargetLanguageState] = useState<TargetLanguage>('ru');
   const [selectedLevel, setSelectedLevelState] = useState<WordLevel>('BEGINNER');
   const [activeTab, setActiveTabState] = useState<AppTab>('dashboard');
   const [currentWordIndex, setCurrentWordIndexState] = useState<number>(0);
   const [stats, setStats] = useState<UserStats>(defaultStats);
-  const [completedWordIds, setCompletedWordIds] = useState<Set<string>>(new Set(['ru_spasibo', 'ru_vdrug']));
+  const [completedWordIds, setCompletedWordIds] = useState<Set<string>>(new Set(DEFAULT_COMPLETED_WORD_IDS));
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [selectedDialogueId, setSelectedDialogueId] = useState<string | null>(null);
   const [completedDialogueIds, setCompletedDialogueIds] = useState<Set<string>>(new Set());
@@ -83,7 +94,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (savedStats) setStats(JSON.parse(savedStats));
 
       const savedCompleted = localStorage.getItem('mnemo_completed');
-      if (savedCompleted) setCompletedWordIds(new Set(JSON.parse(savedCompleted)));
+      if (savedCompleted) {
+        try {
+          const parsed = JSON.parse(savedCompleted);
+          if (Array.isArray(parsed)) {
+            const merged = Array.from(new Set([...DEFAULT_COMPLETED_WORD_IDS, ...parsed]));
+            setCompletedWordIds(new Set(merged));
+          } else {
+            setCompletedWordIds(new Set(DEFAULT_COMPLETED_WORD_IDS));
+          }
+        } catch {
+          setCompletedWordIds(new Set(DEFAULT_COMPLETED_WORD_IDS));
+        }
+      } else {
+        setCompletedWordIds(new Set(DEFAULT_COMPLETED_WORD_IDS));
+      }
 
       const savedCompletedDialogues = localStorage.getItem('mnemo_completed_dialogues');
       if (savedCompletedDialogues) setCompletedDialogueIds(new Set(JSON.parse(savedCompletedDialogues)));
