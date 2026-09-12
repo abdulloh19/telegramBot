@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class EnglishMnemonicBot extends TelegramLongPollingBot {
 
-    public static final String DEFAULT_WEB_APP_URL = "https://orlando-sought-existing-acts.trycloudflare.com";
+    public static final String DEFAULT_WEB_APP_URL = "https://yrs-jvc-minutes-substance.trycloudflare.com";
 
     private final String botUsername;
     private final String botToken;
@@ -517,15 +517,21 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
             sendNewQuiz(chatId);
         } else if (data.equals("bot_overall_stats")) {
             sendOverallBotStats(chatId, profile);
+        } else if (data.equals("change_language")) {
+            sendInitialLanguagePrompt(chatId, profile);
         } else if (data.equals("my_words_list")) {
             sendMyLearnedWords(chatId, profile);
         } else if (data.equals("mywords_lang_ru")) {
             int msgId = (update.getCallbackQuery() != null && update.getCallbackQuery().getMessage() != null)
                     ? update.getCallbackQuery().getMessage().getMessageId() : -1;
+            profile.setTargetLanguage(TargetLanguage.RUSSIAN);
+            userRepository.save(profile);
             sendMyLearnedWords(chatId, profile, TargetLanguage.RUSSIAN, msgId);
         } else if (data.equals("mywords_lang_en")) {
             int msgId = (update.getCallbackQuery() != null && update.getCallbackQuery().getMessage() != null)
                     ? update.getCallbackQuery().getMessage().getMessageId() : -1;
+            profile.setTargetLanguage(TargetLanguage.ENGLISH);
+            userRepository.save(profile);
             sendMyLearnedWords(chatId, profile, TargetLanguage.ENGLISH, msgId);
         } else if (data.startsWith("dialog_topic_")) {
             String topicId = data.replace("dialog_topic_", "");
@@ -584,12 +590,12 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
 
         List<InlineKeyboardButton> r1 = new ArrayList<>();
-        InlineKeyboardButton b1 = new InlineKeyboardButton("🇬🇧 Ingliz tili (English)");
+        InlineKeyboardButton b1 = new InlineKeyboardButton("🇬🇧 Ingliz tili (" + profile.getTotalWordsLearnedEn() + " ta)");
         b1.setCallbackData("set_lang_en");
         r1.add(b1);
 
         List<InlineKeyboardButton> r2 = new ArrayList<>();
-        InlineKeyboardButton b2 = new InlineKeyboardButton("🇷🇺 Rus tili (Русский язык)");
+        InlineKeyboardButton b2 = new InlineKeyboardButton("🇷🇺 Rus tili (" + profile.getTotalWordsLearnedRu() + " ta)");
         b2.setCallbackData("set_lang_ru");
         r2.add(b2);
 
@@ -613,11 +619,23 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
     private void handleSetUserLanguage(long chatId, UserProfile profile, String data, int messageId) {
         TargetLanguage lang = data.equals("set_lang_ru") ? TargetLanguage.RUSSIAN : TargetLanguage.ENGLISH;
         profile.setTargetLanguage(lang);
-        profile.setSelectedLevel(null); // yangi til uchun daraja so'raladi
-        profile.setCurrentWordInDay(0);
         userRepository.save(profile);
 
-        sendInitialLevelPrompt(chatId, profile);
+        int count = profile.getWordsLearnedByLanguage(lang);
+        String langTitle = (lang == TargetLanguage.RUSSIAN) ? "🇷🇺 Rus Tili" : "🇬🇧 Ingliz Tili";
+
+        if (profile.getSelectedLevel() == null) {
+            sendInitialLevelPrompt(chatId, profile);
+        } else {
+            SendMessage msg = new SendMessage();
+            msg.setChatId(String.valueOf(chatId));
+            msg.setText("🌐 <b>Tanlangan til:</b> " + langTitle + "\n📚 <b>Ushbu tilda yodlangan so'zlar:</b> <b>" + count + " ta</b>");
+            msg.setParseMode("HTML");
+            try {
+                execute(msg);
+            } catch (Exception ignored) {}
+            sendWelcomeMessage(chatId, profile);
+        }
     }
 
     // =========================================================================
@@ -628,9 +646,11 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         TargetLanguage lang = (profile.getTargetLanguage() != null) ? profile.getTargetLanguage() : TargetLanguage.ENGLISH;
         String langTitle = (lang == TargetLanguage.RUSSIAN) ? "🇷🇺 Rus Tili Mnemonika Tizimi" : "🇬🇧 Ingliz Tili Mnemonika Tizimi";
         String langWord = (lang == TargetLanguage.RUSSIAN) ? "rus tili" : "ingliz tili";
+        int wordsCount = profile.getWordsLearnedByLanguage(lang);
 
         String text = "👋 <b>Assalomu alaykum, " + escapeHtml(name) + "!</b>\n\n" +
-                "🧠 <b>" + langTitle + "ga xush kelibsiz!</b>\n\n" +
+                "🧠 <b>" + langTitle + "ga xush kelibsiz!</b>\n" +
+                "📚 <b>Yodlangan so'zlaringiz:</b> <b>" + wordsCount + " ta</b>\n\n" +
                 "Sizga eng mos so'zlar, ovozli talaffuzlar va mashqlarni taqdim etishimiz uchun, iltimos, <b>" + langWord + " darajangizni tanlang:</b>";
 
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
@@ -715,12 +735,13 @@ public class EnglishMnemonicBot extends TelegramLongPollingBot {
         TargetLanguage lang = (profile.getTargetLanguage() != null) ? profile.getTargetLanguage() : TargetLanguage.ENGLISH;
         String langFlag = lang.getFlag();
         String botTitle = (lang == TargetLanguage.RUSSIAN) ? "Rus Tili Mnemonika Boti" : "Ingliz Tili Mnemonika Boti";
+        int langLearned = profile.getWordsLearnedByLanguage(lang);
 
         String welcomeText = "👋 <b>Assalomu alaykum, " + escapeHtml(name) + "!</b>\n\n" +
                 "🧠 <b>" + langFlag + " " + botTitle + " (Versiya 4.0)</b>\n\n" +
                 "🎯 <b>DARSLARINGIZ QOLGAN JOYIDAN DAVOM ETADI:</b>\n" +
                 "• 📚 <b>Hozirgi Darsingiz:</b> " + profile.getCurrentDayIndex() + "-kun, <b>" + (profile.getCurrentWordInDay() + 1) + "-so'z</b>\n" +
-                "• 📝 <b>Yodlangan so'zlar:</b> " + profile.getTotalWordsLearned() + " ta\n" +
+                "• 📝 <b>Yodlangan so'zlar (" + lang.getDisplayName() + "):</b> " + langLearned + " ta\n" +
                 "• 🌐 <b>Faol til:</b> " + lang.getDisplayName() + "\n" +
                 "• 🎯 <b>Tanlangan daraja:</b> " + levelName + "\n" +
                 "• 🔥 <b>Joriy Streak:</b> " + streak + " kun\n\n" +

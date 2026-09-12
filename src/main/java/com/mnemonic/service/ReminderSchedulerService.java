@@ -113,7 +113,7 @@ public class ReminderSchedulerService {
         row1.add(lessonBtn);
         rows.add(row1);
 
-        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : "https://pubs-cultures-salvador-specialties.trycloudflare.com";
+        String webUrl = System.getenv("WEBAPP_URL") != null ? System.getenv("WEBAPP_URL") : "https://yrs-jvc-minutes-substance.trycloudflare.com";
         List<InlineKeyboardButton> row2 = new ArrayList<>();
         InlineKeyboardButton webBtn = new InlineKeyboardButton("📱 Super Ilovada Darsni Ochish");
         webBtn.setWebApp(new org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo(webUrl));
