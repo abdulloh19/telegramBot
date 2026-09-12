@@ -33,18 +33,23 @@ export const Header: React.FC = () => {
     speakWord,
     completedWordsRu,
     completedWordsEn,
+    activeWords,
   } = useApp();
 
   const [isSuperMenuOpen, setIsSuperMenuOpen] = useState<boolean>(false);
 
   const handleTestAudio = () => {
-    audioManager.playClickSound();
+    try {
+      audioManager.playClickSound();
+    } catch {}
     const testPhrase = targetLanguage === 'ru' ? 'Здравствуйте! Добро пожаловать!' : 'Hello! Welcome to Mnemonic learning!';
     speakWord(testPhrase);
   };
 
   const handleSelectTab = (tab: AppTab) => {
-    audioManager.playClickSound();
+    try {
+      audioManager.playClickSound();
+    } catch {}
     setActiveTab(tab);
     setIsSuperMenuOpen(false);
   };
@@ -59,10 +64,10 @@ export const Header: React.FC = () => {
     },
     {
       id: 'lesson' as AppTab,
-      title: '20 ta Kun So\'zi',
+      title: `${activeWords.length} ta Kun So'zi`,
       subtitle: 'Mnemonik assotsiatsiya va obrazlar bilan 4-bosqich',
       icon: Sparkles,
-      badge: '20 ta',
+      badge: `${activeWords.length} ta`,
       color: 'from-indigo-500 to-purple-600',
     },
     {
@@ -149,6 +154,7 @@ export const Header: React.FC = () => {
           {/* Center: Language Switcher with Compact Flags & Word Counts */}
           <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 shrink-0">
             <button
+              id="btn-lang-ru-header"
               onClick={() => setTargetLanguage('ru')}
               className={`px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
                 targetLanguage === 'ru'
@@ -162,6 +168,7 @@ export const Header: React.FC = () => {
             </button>
 
             <button
+              id="btn-lang-en-header"
               onClick={() => setTargetLanguage('en')}
               className={`px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
                 targetLanguage === 'en'
@@ -225,6 +232,7 @@ export const Header: React.FC = () => {
 
             {/* ⚡ SLEEK SUPER MENYU BUTTON (Never squished or cut-off!) */}
             <button
+              id="btn-super-menu-toggle"
               onClick={() => setIsSuperMenuOpen(!isSuperMenuOpen)}
               className="h-9 px-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-bold text-xs shadow-md shadow-indigo-500/25 flex items-center gap-1.5 hover:opacity-95 active:scale-95 transition-all cursor-pointer select-none shrink-0"
               title="Super Menyu"
@@ -309,6 +317,7 @@ export const Header: React.FC = () => {
                     return (
                       <button
                         key={item.id}
+                        id={`btn-tab-${item.id}`}
                         onClick={() => handleSelectTab(item.id)}
                         className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between transition-all duration-200 group cursor-pointer ${
                           isActive

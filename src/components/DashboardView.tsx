@@ -215,13 +215,14 @@ export const DashboardView: React.FC = () => {
 
           {/* Quick Action Button */}
           <button
+            id="btn-hero-lesson"
             onClick={() => setActiveTab('lesson')}
             className="flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shrink-0"
           >
             <span>
               {currentWordIndex > 0
-                ? `Bugungi darsni davom ettirish (${currentWordIndex + 1}-so'zdan)`
-                : "Bugungi 20 ta so'z darsi"}
+                ? `Bugungi darsni davom ettirish (${currentWordIndex + 1}/${activeWords.length})`
+                : `Bugungi ${activeWords.length} ta so'z darsi`}
             </span>
             <ArrowRight className="w-5 h-5" />
           </button>
@@ -288,6 +289,7 @@ export const DashboardView: React.FC = () => {
             {/* Tilni tanlash / almashtirish tugmalari */}
             <div className="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-xl border border-slate-800 shrink-0">
               <button
+                id="btn-dash-lang-ru"
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -303,6 +305,7 @@ export const DashboardView: React.FC = () => {
                 🇷🇺 Ru ({completedWordsRu.length})
               </button>
               <button
+                id="btn-dash-lang-en"
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -392,6 +395,7 @@ export const DashboardView: React.FC = () => {
             </div>
 
             <button
+              id="btn-featured-speak"
               onClick={handlePlayFeatured}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 isAudioPlaying
@@ -699,6 +703,7 @@ export const DashboardView: React.FC = () => {
 
       {/* 📚 DUAL-LANGUAGE VOCABULARY & PROGRESS HUB (Strict Separation) */}
       <div
+        id="btn-dash-vocab-hub"
         onClick={() => setActiveTab('vocabulary')}
         className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 hover:border-indigo-500/60 shadow-xl cursor-pointer transition-all group"
       >
@@ -766,6 +771,7 @@ export const DashboardView: React.FC = () => {
       <div className="grid sm:grid-cols-3 gap-3.5">
         {/* Module 1: Daily 20 Words */}
         <div
+          id="btn-dash-module-lesson"
           onClick={() => setActiveTab('lesson')}
           className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-850 transition-all cursor-pointer group flex flex-col justify-between shadow-md"
         >
@@ -775,7 +781,7 @@ export const DashboardView: React.FC = () => {
             </div>
             <div>
               <h4 className="text-base font-black text-white group-hover:text-indigo-300 transition-colors">
-                📅 20 ta So'z Darsi {currentWordIndex > 0 ? `(${currentWordIndex + 1}/20)` : ''}
+                📅 {activeWords.length} ta So'z Darsi {currentWordIndex > 0 ? `(${currentWordIndex + 1}/${activeWords.length})` : ''}
               </h4>
               <p className="text-xs sm:text-sm text-slate-300 mt-1 font-medium leading-relaxed">
                 {currentWordIndex > 0
@@ -792,6 +798,7 @@ export const DashboardView: React.FC = () => {
 
         {/* Module 2: Live Dialogues */}
         <div
+          id="btn-dash-module-dialogue"
           onClick={() => setActiveTab('dialogue')}
           className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-850 transition-all cursor-pointer group flex flex-col justify-between shadow-md"
         >
@@ -816,6 +823,7 @@ export const DashboardView: React.FC = () => {
 
         {/* Module 3: Daily Exercises */}
         <div
+          id="btn-dash-module-practice"
           onClick={() => setActiveTab('practice')}
           className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-850 transition-all cursor-pointer group flex flex-col justify-between shadow-md"
         >

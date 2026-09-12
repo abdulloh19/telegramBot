@@ -427,6 +427,7 @@ export const GamesHubView: React.FC = () => {
       {/* Game Mode Selector Nav */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <button
+          id="btn-game-flashcards"
           onClick={() => { audioManager.playClickSound(); setActiveGame('flashcards'); }}
           className={`p-3 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
             activeGame === 'flashcards'
@@ -439,6 +440,7 @@ export const GamesHubView: React.FC = () => {
         </button>
 
         <button
+          id="btn-game-match"
           onClick={() => { audioManager.playClickSound(); setActiveGame('match'); }}
           className={`p-3 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
             activeGame === 'match'
@@ -451,6 +453,7 @@ export const GamesHubView: React.FC = () => {
         </button>
 
         <button
+          id="btn-game-scramble"
           onClick={() => { audioManager.playClickSound(); setActiveGame('scramble'); }}
           className={`p-3 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
             activeGame === 'scramble'
@@ -463,6 +466,7 @@ export const GamesHubView: React.FC = () => {
         </button>
 
         <button
+          id="btn-game-sort"
           onClick={() => { audioManager.playClickSound(); setActiveGame('grammarSort'); }}
           className={`p-3 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
             activeGame === 'grammarSort'
