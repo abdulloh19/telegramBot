@@ -298,9 +298,9 @@ export const DashboardView: React.FC = () => {
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white hover:bg-slate-900'
                 }`}
-                title="Rus tilida yodlangan so'zlar"
+                title={`Rus tilida yodlangan so'zlar (${completedWordsRu.length} ta)`}
               >
-                🇷🇺 Ru
+                🇷🇺 Ru ({completedWordsRu.length})
               </button>
               <button
                 type="button"
@@ -313,9 +313,9 @@ export const DashboardView: React.FC = () => {
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white hover:bg-slate-900'
                 }`}
-                title="Ingliz tilida yodlangan so'zlar"
+                title={`Ingliz tilida yodlangan so'zlar (${completedWordsEn.length} ta)`}
               >
-                🇬🇧 En
+                🇬🇧 En ({completedWordsEn.length})
               </button>
             </div>
           </div>

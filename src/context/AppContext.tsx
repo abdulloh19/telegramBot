@@ -58,12 +58,16 @@ const defaultStats: UserStats = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Boshlang'ich holatda: Foydalanuvchi o'rgangan 19 ta Rus tili so'zlari (aniq mavjud ID lar)
+// Boshlang'ich holatda: 19 ta Rus tili va 10 ta Ingliz tili o'zlashtirilgan so'zlari
 const DEFAULT_COMPLETED_WORD_IDS = [
+  // 19 ta Rus tili
   'ru_spasibo', 'ru_vdrug', 'ru_mechta', 'ru_pobeda', 'ru_pogoda',
   'ru_ostorojno', 'ru_ulibka', 'ru_drujba', 'ru_pomosh', 'ru_skazka',
   'ru_vremya', 'ru_nadejda', 'ru_schaste', 'ru_puteshestvie', 'ru_vnimanie',
-  'ru_pravda', 'ru_spokoystvie', 'ru_uspex', 'ru_zavtra'
+  'ru_pravda', 'ru_spokoystvie', 'ru_uspex', 'ru_zavtra',
+  // 10 ta Ingliz tili
+  'en_abandon', 'en_curious', 'en_drowsy', 'en_hesitate', 'en_fragile',
+  'en_novice', 'en_quench', 'en_obstacle', 'en_marvellous', 'en_candid'
 ];
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

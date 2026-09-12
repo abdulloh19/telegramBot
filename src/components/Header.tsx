@@ -31,6 +31,8 @@ export const Header: React.FC = () => {
     setActiveTab,
     stats,
     speakWord,
+    completedWordsRu,
+    completedWordsEn,
   } = useApp();
 
   const [isSuperMenuOpen, setIsSuperMenuOpen] = useState<boolean>(false);
@@ -144,7 +146,7 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* Center: Language Switcher with Compact Flags */}
+          {/* Center: Language Switcher with Compact Flags & Word Counts */}
           <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 shrink-0">
             <button
               onClick={() => setTargetLanguage('ru')}
@@ -153,10 +155,10 @@ export const Header: React.FC = () => {
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Rus tili"
+              title={`Rus tili (${completedWordsRu.length} ta yodlangan)`}
             >
               <span>🇷🇺</span>
-              <span className="text-[11px] hidden md:inline">RU</span>
+              <span className="text-[11px]">RU ({completedWordsRu.length})</span>
             </button>
 
             <button
@@ -166,10 +168,10 @@ export const Header: React.FC = () => {
                   ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/25'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Ingliz tili"
+              title={`Ingliz tili (${completedWordsEn.length} ta yodlangan)`}
             >
               <span>🇬🇧</span>
-              <span className="text-[11px] hidden md:inline">EN</span>
+              <span className="text-[11px]">EN ({completedWordsEn.length})</span>
             </button>
           </div>
 
